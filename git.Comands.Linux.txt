@@ -1,0 +1,22 @@
+
+
+git config --global user.name "EmersonAS"
+git config --global user.email "emersonls2008@hotmail.com"
+git config --list
+
+mkdir git_workspace
+cd git_workspace
+
+git clone https://github.com/EmersonAS/Redes.git
+cd Redes
+
+touch cliente.c
+gedit cliente.c
+
+git status
+git add cliente.c
+git status
+git commit -m "codigo do cliente"
+git push -u origin master
+
+
