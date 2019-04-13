@@ -211,32 +211,35 @@ int main(int argc, char *argv[]) {
             
             fp = fopen(buffer, "r");	// r+: open a file to update both reading and writing
         	
-	        if(fp == NULL){
-	            printf("Erro na abertura do arquivo. Programa encerrado. \n");
-	            exit(1);
-	        }
+  	        if(fp == NULL){
+  	            printf("Erro na abertura do arquivo. Programa encerrado. \n");
+  	            exit(1);
+  	        }
 
-	        // Envia o conteudo do arquivo recebido
+	          // Envia o conteudo do arquivo recebido
 
-	        /*
-			Function fread():
-			size_t fread(void *ptr, size_t size, size_t n, FILE *fp);
-			sizeof(char) = 1 byte;
-	        */
-	        int msg_length = 0;
-	        msg_length = fread(buffer, sizeof(char), BUFFERSIZE-1, fp);
-	        while( msg_length > 0 ){	// Lê o proximo pedaço da msg e coloca em buffer
-	        	buffer[BUFFERSIZE-1] = '\0';
-	        	status = send(clientfd, buffer, BUFFERSIZE, 0);			// Envia o buffer lido
-	            //memset(buffer, 0x0, BUFFERSIZE);							// Zera o buffer
-	            msg_length = fread(buffer, sizeof(char), BUFFERSIZE-1, fp);
-	        }
+      	        /*
+      			Function fread():
+      			size_t fread(void *ptr, size_t size, size_t n, FILE *fp);
+      			sizeof(char) = 1 byte;
+      	        */
+            int msg_length = 0;
+            memset(buffer, 0, BUFFERSIZE);
+            while( (msg_length = fread(buffer, sizeof(char), (BUFFERSIZE-1)/sizeof(char), fp)) > 0 ){  // Lê o proximo pedaço da msg e coloca em buffer
+              buffer[BUFFERSIZE-1] = '\0';
+              status = send(clientfd, buffer, BUFFERSIZE, 0);     // Envia o buffer lido
+              memset(buffer, 0, BUFFERSIZE);
+              printf("%d\n", msg_length);
+            }
 
-			fclose(fp);	// fecha arquivo de leitura
+            fclose(fp);	// fecha arquivo de leitura
+
+        } else {
+          printf("Nome de arquivo invalido.\n");
         }
 
     } else {
-    	printf("Conexão falhou. Programa encerrado \n");
+    	printf("Conexão falhou. Programa encerrado.\n");
     	exit(1);
     }
 
