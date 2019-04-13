@@ -11,19 +11,22 @@
 #include <errno.h>
 #include <sys/time.h> 
 
+#include <netinet/in.h>
+#include <arpa/inet.h> // inet_addr
+
 #define BUFFER_SIZE 100
 #define PORT 4242
-#define ADDR_SERVER 127.0.0.1
+#define ADDR_SERVER "127.0.0.1"
 
 
-int int main(int argc, char const *argv[]) {
+int main(int argc, char const *argv[]) {
 
 	struct sockaddr_in server_addr;
 	int socket_fd;
 
 	char buffer[BUFFER_SIZE];
 
-	string FILE_NAME = "arquivoTeste1.txt";
+	char FILE_NAME[] = "arquivoTeste1.txt";
 
 	int status = 0;
 
@@ -33,7 +36,7 @@ int int main(int argc, char const *argv[]) {
 	
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(PORT);
-	server_addr.sin_addr.sin_addr = inet_addr(ADDR_SERVER);
+	server_addr.sin_addr.s_addr = inet_addr(ADDR_SERVER);
 
 	/*
 	IP ADDR OF SERVER HOST:
@@ -74,7 +77,8 @@ int int main(int argc, char const *argv[]) {
 		
 		status = send(socket_fd, FILE_NAME, sizeof(FILE_NAME), 0); // Envia nome do arquivo a ser aberto: string terminada em /0
 		
-		fp = fopen(strcat(FILE_NAME,"ClientVersion"), "w+");
+		char Name[] = "ClientVersion";
+		fp = fopen(strcat(Name,FILE_NAME), "w+");
 
 		if(fp == NULL){
 	        printf("Erro na abertura do arquivo. Programa encerrado.\n");
@@ -82,7 +86,7 @@ int int main(int argc, char const *argv[]) {
 	    }
 
 	    int msg_length = 0;
-	    memset(buffer, 0x0, BUFFER_SIZE); // zera o buffer
+	    //memset(buffer, 0x0, BUFFER_SIZE); // zera o buffer
 		msg_length = recv(socket_fd, buffer, BUFFER_SIZE, 0); // rcv content
 
 		/*
@@ -98,8 +102,9 @@ int int main(int argc, char const *argv[]) {
 
 		// Grava conteudo do arquivo recebido
 		while(msg_length > 0){
-			fwrite(buffer, sizeof(char), sizeof(buffer), fp);		// testar
-			memset(buffer, 0x0, BUFFER_SIZE); 						// zera o buffer
+			fwrite(buffer, sizeof(char), msg_length-1, fp);		// testar
+			//buffer[sizeof(buffer)-1] = '\0';
+			//memset(buffer, 0x0, BUFFER_SIZE); 						// zera o buffer
 			msg_length = recv(socket_fd, buffer, BUFFER_SIZE, 0); 	// rcv content
 		}
 
