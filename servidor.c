@@ -202,15 +202,15 @@ int main(int argc, char *argv[]) {
 
         */
 
-        int message_len;
-        message_len = recv(clientfd, buffer, BUFFERSIZE, 0);
+        int file_name_length;
+        file_name_length = recv(clientfd, buffer, BUFFERSIZE, 0);
 
-        if(message_len > 0) {
-            buffer[message_len - 1] = '\0';	// to indicate the end of the msg received
+        if(file_name_length > 0) {
+            //buffer[file_name_length - 1] = '\0';	// to indicate the end of the msg received
             printf("Nome do arquivo recebido: %s\n", buffer);
             
-            fp = fopen(buffer, "r+");	// r+: open a file to update both reading and writing
-        
+            fp = fopen(buffer, "r");	// r+: open a file to update both reading and writing
+        	
 	        if(fp == NULL){
 	            printf("Erro na abertura do arquivo. Programa encerrado. \n");
 	            exit(1);
@@ -223,15 +223,18 @@ int main(int argc, char *argv[]) {
 			size_t fread(void *ptr, size_t size, size_t n, FILE *fp);
 			sizeof(char) = 1 byte;
 	        */
-
-	        while( (fread(buffer,sizeof(char),sizeof(buffer),fp)) != 0 ){	// Lê o proximo pedaço da msg e coloca em buffer
-	        	status = send(clientfd, buffer, strlen(buffer), 0);			// Envia o buffer lido
-	            memset(buffer, 0x0, BUFFERSIZE);							// Zera o buffer
+	        int msg_length = 0;
+	        msg_length = fread(buffer, sizeof(char), BUFFERSIZE-1, fp);
+	        while( msg_length > 0 ){	// Lê o proximo pedaço da msg e coloca em buffer
+	        	buffer[BUFFERSIZE-1] = '\0';
+	        	status = send(clientfd, buffer, BUFFERSIZE, 0);			// Envia o buffer lido
+	            //memset(buffer, 0x0, BUFFERSIZE);							// Zera o buffer
+	            msg_length = fread(buffer, sizeof(char), BUFFERSIZE-1, fp);
 	        }
 
 			fclose(fp);	// fecha arquivo de leitura
-
         }
+
     } else {
     	printf("Conexão falhou. Programa encerrado \n");
     	exit(1);
