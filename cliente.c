@@ -134,7 +134,9 @@ int main(int argc, char const *argv[]) {
 1 - inet_addr: 			https://linux.die.net/man/3/inet_addr
 2 - fwrite:				http://www.cplusplus.com/reference/cstdio/fwrite/
 3 - 					https://www.geeksforgeeks.org/readwrite-structure-file-c/
-4 - 
-5 - 
+4 - fwrite strlen:		http://forums.codeguru.com/showthread.php?452056-fwrite()-writes-garbage-at-the-end-of-the-file
+5 - string em C:		https://www.geeksforgeeks.org/strings-in-c-2/
+6 - strlen:				http://www.cplusplus.com/reference/cstring/strlen/
+						https://www.geeksforgeeks.org/strlen-function-in-c/
 
 */
