@@ -9,9 +9,9 @@
 
 #include <unistd.h>
 #include <errno.h>
-#include <sys/time.h>
+#include <sys/time.h> // gettimeofday()
 
-#define BUFFERSIZE 100
+#define BUFFERSIZE 1024
 #define BACKLOG 5
 
 
@@ -44,11 +44,26 @@ int main(int argc, char *argv[]) {
     int status = 0;
 
     int porta = 4242;
-    int  i;//, flag = 0;
 
     struct timeval start, end;
 
-    gettimeofday(&start,NULL);
+    gettimeofday(&start, NULL);
+
+    /*
+    start and end são structs do tipo timeval
+
+    struct timeval {
+      time_t      tv_sec;     // seconds
+      suseconds_t tv_usec;    // microseconds
+    };
+    
+    gives the number of seconds and microseconds since the Epoch
+
+    Epoch: 1970-01-01 00:00:00 +0000 (UTC).
+
+    int gettimeofday(struct timeval *tv, struct timezone *tz);
+
+    */
 
     FILE * fp;
 
@@ -100,11 +115,10 @@ int main(int argc, char *argv[]) {
 
     status = bind(serverfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr));
 
-	if (status == -1)
-	{
-		printf("Binding process falhou. Programa encerrado.\n");
+	  if (status == -1) {
+		  printf("Binding process falhou. Programa encerrado.\n");
     	exit(1);
-	}
+    }
 
       /********************************************************************
        * A função listen() permite que o servidor aceite próximas conexões*
@@ -113,10 +127,10 @@ int main(int argc, char *argv[]) {
        * recusar novas solicitações.                                      *
        ********************************************************************/
 
-	/*
-	listen(): listen for connections on a socket - marks the socket referred to by serverfd as a passive socket,
+	   /*
+	   listen(): listen for connections on a socket - marks the socket referred to by serverfd as a passive socket,
        that is, as a socket that will be used to accept incoming connection requests using accept().
-	*/
+	   */
 
     status = listen(serverfd, BACKLOG);
 
@@ -187,7 +201,10 @@ int main(int argc, char *argv[]) {
     //ssize_t bytes_sent = 0;	// signed size_t == ssize_t
     // int strlen(const char *str): calculates the length of a given string, returns this length
 
-	status = send(clientfd, buffer, strlen(buffer), 0);
+    status = send(clientfd, buffer, strlen(buffer), 0);
+
+    int bytes_sent_total = 0;
+    int bytes_sent = 0;
 
     if (status != -1) {
         printf("Conexão estabelecida! \n");
@@ -223,13 +240,14 @@ int main(int argc, char *argv[]) {
       			size_t fread(void *ptr, size_t size, size_t n, FILE *fp);
       			sizeof(char) = 1 byte;
       	        */
-            int msg_length = 0;
             memset(buffer, 0, BUFFERSIZE);
-            while( (msg_length = fread(buffer, sizeof(char), (BUFFERSIZE-1)/sizeof(char), fp)) > 0 ){  // Lê o proximo pedaço da msg e coloca em buffer
+            while( (bytes_sent = fread(buffer, sizeof(char), (BUFFERSIZE-1)/sizeof(char), fp)) > 0 ){  // Lê o proximo pedaço da msg e coloca em buffer
               buffer[BUFFERSIZE-1] = '\0';
               status = send(clientfd, buffer, BUFFERSIZE, 0);     // Envia o buffer lido
               memset(buffer, 0, BUFFERSIZE);
-              printf("%d\n", msg_length);
+
+              bytes_sent_total += bytes_sent;
+              
             }
 
             fclose(fp);	// fecha arquivo de leitura
@@ -253,9 +271,9 @@ int main(int argc, char *argv[]) {
 
     gettimeofday(&end,NULL);
 
-    printf("%ld segundos; %d bits \n", ((end.tv_sec * 1000000 + end.tv_usec)
-          - (start.tv_sec * 1000000 + start.tv_usec))/1000000,i);
-    
+    printf(" %.4f segundos\n %d bytes enviados\n", 
+      ((end.tv_sec + end.tv_usec * 1e-6) - (start.tv_sec + start.tv_usec * 1e-6)), bytes_sent_total);
+        
 	return 0;
 }
 
@@ -275,7 +293,7 @@ int main(int argc, char *argv[]) {
 10 - receive: 			http://man7.org/linux/man-pages/man2/recv.2.html
 11 - fread:				https://www.geeksforgeeks.org/fread-function-in-c/
 12 - connect:			http://man7.org/linux/man-pages/man2/connect.2.html
-13
+13 - gettimeofday: http://man7.org/linux/man-pages/man2/gettimeofday.2.html
 14
 15
 
