@@ -26,7 +26,7 @@ int main(int argc, char const *argv[]) {
 
 	char buffer[BUFFER_SIZE];
 
-	char FILE_NAME[] = "arquivoTeste1.txt";
+	char FILE_NAME[] = "arquivoTeste2.txt";
 
 	int status = 0;
 
@@ -84,11 +84,11 @@ int main(int argc, char const *argv[]) {
 	        printf("Erro na abertura do arquivo. Programa encerrado.\n");
 	        exit(1);
 	    }
-
+	    /*
 	    int msg_length = 0;
-	    //memset(buffer, 0x0, BUFFER_SIZE); // zera o buffer
+	    
 		msg_length = recv(socket_fd, buffer, BUFFER_SIZE, 0); // rcv content
-
+		*/
 		/*
 		size_t fwrite ( const void * ptr, size_t size, size_t count, FILE * stream );
 			Writes an array of count elements, each one with a size of size bytes, 
@@ -99,13 +99,21 @@ int main(int argc, char const *argv[]) {
 			Internally, the function interprets the block pointed by ptr as if it was an array of (size*count) 
 			elements of type unsigned char, and writes them sequentially to stream as if fputc was called for each byte.
 		*/
-
+	    /*
 		// Grava conteudo do arquivo recebido
 		while(msg_length > 0){
-			fwrite(buffer, sizeof(char), msg_length-1, fp);		// testar
+			fwrite(buffer, 1, BUFFER_SIZE-1, fp);		// testar
 			//buffer[sizeof(buffer)-1] = '\0';
 			//memset(buffer, 0x0, BUFFER_SIZE); 						// zera o buffer
 			msg_length = recv(socket_fd, buffer, BUFFER_SIZE, 0); 	// rcv content
+		}
+		*/
+		//memset(buffer, 0x0, BUFFER_SIZE); // zera o buffer
+		int tam = 0;
+		while( (recv(socket_fd, buffer, BUFFER_SIZE, 0)) > 0 ){
+			tam = fwrite(buffer, sizeof(char), strlen(buffer)/sizeof(char), fp);
+			//memset(buffer, 0, BUFFER_SIZE);
+			printf("%d\n", tam);
 		}
 
 		fclose(fp);	// fecha arquivo de escrita
