@@ -10,18 +10,40 @@
 #include <errno.h>
 #include <sys/time.h> 
 
-#include <string.h>
+#include <string.h>		// strcpy, strlen
+
+#define BUFFERSIZE 100
+#define BACKLOG 5
 
 
-
-
-int main() {
+int main(int argc, char *argv[]) {
 
     struct sockaddr_in serveraddr, clientaddr;
-    int tbuffer = 100;
-    char buffer[tbuffer];
+
+    // Address format: An IP socket address is defined as a combination...
+    // ...of an IP interface address and a 16-bit port number
+
+    /*
+	struct sockaddr_in {
+        sa_family_t    sin_family; // address family: AF_INET
+        in_port_t      sin_port;   // port in network byte order
+        struct in_addr sin_addr;   // internet address
+    };
+
+    // Internet address
+
+    struct in_addr {
+        uint32_t	s_addr;			// address in network byte order
+    };
+
+    */
+
+    char buffer[BUFFERSIZE];
     int serverfd, clientfd;
-    int porta = 4242; 
+
+    int status = 0;
+
+    int porta = 4242;
     int  i, flag = 0;
 
     struct timeval start, end;
@@ -29,70 +51,187 @@ int main() {
 
     FILE * fp;
 
-        /********************************************************************
+       /********************************************************************
        * A função socket() retorna um descritor de socket, que representa *
-       * um ponto final. Vai receber um descritor de soquete com base IPV4                                    *
+       * um ponto final (end point). Vai receber um descritor de soquete com base IPV4                                    *
        ********************************************************************/
 
     serverfd = socket(AF_INET, SOCK_STREAM, 0);  
+    
+    if (serverfd == -1)
+    {
+    	printf("Estabelecimento do socket falhou! Programa encerrado.\n");
+    	exit(1);
+    }
 
-      /********************************************************************
-       * Depois do descritor do soquete ser criado, a função bind() vai   *
+
+    /* Set the socket options for what ???? */
+
+    int yes = 1;
+    status = setsockopt(serverfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+    
+    if (status == -1)
+    {
+    	printf("Socket options falhou. Programa encerrado.\n");
+    	exit(1);
+    }
+
+       /********************************************************************
+       * Depois do descritor do socket ser criado, a função bind() vai   *
        * pegar um nome único para o socket.                               *
        ********************************************************************/
 
-    int yes = 1;
-    setsockopt(serverfd, SOL_SOCKET, SO_REUSEADDR,&yes, sizeof(int)); // Testar o retorno dessa funcao
-    memset(&serveraddr, 0, sizeof(serveraddr));
-    serveraddr.sin_family = AF_INET;
-    serveraddr.sin_port   = htons(porta);
+    //printf("%s\n", );
+    memset(&serveraddr, 0, sizeof(serveraddr));	// preenche os campos da struct serveraddr do tipo sock addr com 0's, return void
+    //printf("%s\n", );
 
+    // preenche os campos da struct socket addr serveraddr
+    serveraddr.sin_family = AF_INET;		// AF_INET: IPv4 Internet protocols
+    serveraddr.sin_port   = htons(porta);	// htons: converts the unsigned short integer porta from host byte order to network byte order
 
-    bind(serverfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr));
+    /*
+    When a socket is created with socket(...), it exists in a name space
+       (address family) but has no address assigned to it. bind() assigns
+       the address specified by serveraddr to the socket referred to by the file
+       descriptor serverfd. size(serveraddr) specifies the size, in bytes, of the
+       address structure pointed to by serveraddr
+    */
 
-	// Testar o retorno dessa funcao
+    status = bind(serverfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr));
+
+	if (status == -1)
+	{
+		printf("Binding process falhou. Programa encerrado.\n");
+    	exit(1);
+	}
 
       /********************************************************************
        * A função listen() permite que o servidor aceite próximas conexões*
-       * de clientes. O backlog 5 representa que o servidor fará um fila  *
+       * de clientes. Backlog representa que o servidor fará um fila  *
        * de 5 solicitações de conexões de clientes até que ele comece a   *
        * recusar novas solicitações.                                      *
        ********************************************************************/
 
-    listen(serverfd, 5);	// Testar o retorno dessa funcao
- 
-    socklen_t client_len = sizeof(clientaddr);
-    clientfd = accept(serverfd, (struct sockaddr *) &clientaddr, &client_len ); // Testar o retorno dessa funcao
+	/*
+	listen(): listen for connections on a socket - marks the socket referred to by serverfd as a passive socket,
+       that is, as a socket that will be used to accept incoming connection requests using accept().
+	*/
 
+    status = listen(serverfd, BACKLOG);
+
+    if (status == -1)
+    {
+    	printf("Listening process falhou. Programa encerrado.\n");
+    	exit(1);
+    }
+ 
+    /* accept a connection on a socket
+    The accept() system call is used with connection-based socket types
+       (SOCK_STREAM, SOCK_SEQPACKET). It extracts the first connection
+       request on the queue of pending connections for the listening socket,
+       sockfd, creates a new connected socket, and returns a new file
+       descriptor referring to that socket
+	
+	The argument serverfd is a socket that has been created with socket(),
+       bound to a local address with bind(), and is listening for
+       connections after a listen() call.
+	
+	The argument clientaddr is a pointer to a sockaddr_in structure. This
+       structure is filled in with the address of the peer socket (the client), as known
+       to the communications layer
+
+    The client_len argument is a value-result argument: the caller must
+       initialize it to contain the size (in bytes) of the structure pointed
+       to by clientaddr; on return it will contain the actual size of the peer
+       address.
+
+    */
+
+    socklen_t client_len = sizeof(clientaddr);
+    
+    clientfd = accept(serverfd, (struct sockaddr *) &clientaddr, &client_len);
+
+    if (clientfd == -1)
+    {
+    	printf("accept connection falhou! Programa encerrado.\n");
+    	exit(1);
+    }
+
+    /* char* strcpy(char* dest, const char* src)
+	
+    dest: Pointer to the destination array where the content is to be copied.
+    src: string which will be copied.
+
+	*/
     strcpy(buffer, "Estabelecendo conexão ...\n\0");
-   
-    if (send(clientfd, buffer, strlen(buffer), 0)) { // Encerrar se não enviar
+
+    /* send(): used to send/transmit a message to another socket. 
+	
+	The send() call may be used only when the socket is in a connected
+       state (so that the intended recipient is known)
+
+    For send() and sendto(), the message is found in buffer and has length len.
+
+    If the message is too long to pass atomically through the underlying
+       protocol, the error EMSGSIZE is returned, and the message is not
+       transmitted.
+	
+    On success, these calls return the number of bytes sent. On error,
+       -1 is returned
+
+    ssize_t send(int sockfd, const void *buffer, size_t len, int flags);
+	
+    */
+
+    ssize_t bytes_sent = 0;	// signed size_t == ssize_t
+    // int strlen(const char *str): calculates the length of a given string, returns this length
+
+	bytes_sent = send(clientfd, buffer, strlen(buffer), 0);
+
+    if (bytes_sent != -1) {
         printf("Conexão estabelecida! \n");
 
        
     //Abertura do arquivo
         do {
 
-            int message_len;
-          	if((message_len = recv(clientfd, buffer, tbuffer, 0)) > 0) {
-                buffer[message_len - 1] = '\0';
+            int message_len; //
+
+            /*
+			
+			receive a message from a socket
+			
+			The recv() call is normally used only on a connected socket
+
+       		return the number of bytes received, or -1 if an error occurred
+			
+			ssize_t recv(int sockfd, void *buffer, size_t length_buffer, int flags);
+
+            */
+
+          	if((message_len = recv(clientfd, buffer, BUFFERSIZE, 0)) > 0) {
+                buffer[message_len - 1] = '\0';	// to indicate the end of the msg received
                 printf("Nome do arquivo recebido: %s\n", buffer);
             }
 
-            fp = fopen (buffer, "r+");
+            fp = fopen(buffer, "r+");
+            
             if(fp == NULL){
-                printf("Erro abertura de arquivo! \n");   
-                exit(1);             
-            } else{
-                break;
+                printf("Erro na abertura do arquivo. Programa encerrado. \n");
+                exit(1);
             }
+
+            ////////////////////////////////////////// Enviar o conteudo do arquivo recebido
+
+
+
           
         } while(1); // While até receber um nome válido de um arquivo
 
     //Envio dos dados do arquivo
         do {
-
-            for (i=0; i<=tbuffer-1; i++){
+/*
+            for (i = 0; i <= BUFFERSIZE-1; i++){
 
                 buffer[i] = fgetc(fp);
 
@@ -101,6 +240,7 @@ int main() {
                     break;
                 }
             }
+*/
             if (flag == 1){
             	send(clientfd, buffer, i, 0);	// Testar o retorno dessa funcao
             	break;
@@ -108,14 +248,14 @@ int main() {
 
             send(clientfd, buffer, i, 0);	// Testar o retorno dessa funcao
 
-            memset(buffer, 0x0, tbuffer);
+            memset(buffer, 0x0, BUFFERSIZE);	// Zera o buffer
            
         } while(1);
     }
 
 
 //Fechando conexão 
-    close(clientfd);	// ??
+    close(clientfd);
     close(serverfd);
     gettimeofday(&end,NULL);	// Testar o retorno dessa funcao
 
@@ -127,3 +267,25 @@ int main() {
 	return 0;
 }
 
+
+
+/* REFERENCES
+
+1 - memset: 			https://www.geeksforgeeks.org/memset-c-example/
+2 - setsockopt: 		https://linux.die.net/man/3/setsockopt
+3 - socket: 			http://man7.org/linux/man-pages/man2/socket.2.html
+4 - Linux IPv4: 		http://man7.org/linux/man-pages/man7/ip.7.html
+5 - Byte order htons(): http://man7.org/linux/man-pages/man3/htons.3.html
+6 - bind: 				http://man7.org/linux/man-pages/man2/bind.2.html
+7 - listen: 			http://man7.org/linux/man-pages/man2/listen.2.html
+8 - send:				http://man7.org/linux/man-pages/man2/send.2.html
+9 - accept:				http://man7.org/linux/man-pages/man2/accept.2.html
+10 - receive: 			http://man7.org/linux/man-pages/man2/recv.2.html
+11 - fread:				https://www.geeksforgeeks.org/fread-function-in-c/
+12 - connect:			http://man7.org/linux/man-pages/man2/connect.2.html
+13
+14
+15
+
+
+*/
