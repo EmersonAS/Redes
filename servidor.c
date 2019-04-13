@@ -2,15 +2,14 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+
 #include <stdio.h>
-#include <string.h>
+#include <string.h>		// strcpy, strlen
 #include <stdlib.h>
 
 #include <unistd.h>
 #include <errno.h>
-#include <sys/time.h> 
-
-#include <string.h>		// strcpy, strlen
+#include <sys/time.h>
 
 #define BUFFERSIZE 100
 #define BACKLOG 5
@@ -39,14 +38,16 @@ int main(int argc, char *argv[]) {
     */
 
     char buffer[BUFFERSIZE];
+
     int serverfd, clientfd;
 
     int status = 0;
 
     int porta = 4242;
-    int  i, flag = 0;
+    int  i;//, flag = 0;
 
     struct timeval start, end;
+
     gettimeofday(&start,NULL);
 
     FILE * fp;
@@ -183,87 +184,72 @@ int main(int argc, char *argv[]) {
 	
     */
 
-    ssize_t bytes_sent = 0;	// signed size_t == ssize_t
+    //ssize_t bytes_sent = 0;	// signed size_t == ssize_t
     // int strlen(const char *str): calculates the length of a given string, returns this length
 
-	bytes_sent = send(clientfd, buffer, strlen(buffer), 0);
+	status = send(clientfd, buffer, strlen(buffer), 0);
 
-    if (bytes_sent != -1) {
+    if (status != -1) {
         printf("Conexão estabelecida! \n");
 
-       
-    //Abertura do arquivo
-        do {
-
-            int message_len; //
-
-            /*
+        /*
+		
+		Receive a message from a socket
+		The recv() call is normally used only on a connected socket
+       	return the number of bytes received, or -1 if an error occurred
 			
-			receive a message from a socket
-			
-			The recv() call is normally used only on a connected socket
+		ssize_t recv(int sockfd, void *buffer, size_t length_buffer, int flags);
 
-       		return the number of bytes received, or -1 if an error occurred
-			
-			ssize_t recv(int sockfd, void *buffer, size_t length_buffer, int flags);
+        */
 
-            */
+        int message_len;
+        message_len = recv(clientfd, buffer, BUFFERSIZE, 0);
 
-          	if((message_len = recv(clientfd, buffer, BUFFERSIZE, 0)) > 0) {
-                buffer[message_len - 1] = '\0';	// to indicate the end of the msg received
-                printf("Nome do arquivo recebido: %s\n", buffer);
-            }
-
-            fp = fopen(buffer, "r+");
+        if(message_len > 0) {
+            buffer[message_len - 1] = '\0';	// to indicate the end of the msg received
+            printf("Nome do arquivo recebido: %s\n", buffer);
             
-            if(fp == NULL){
-                printf("Erro na abertura do arquivo. Programa encerrado. \n");
-                exit(1);
-            }
+            fp = fopen(buffer, "r+");	// r+: open a file to update both reading and writing
+        
+	        if(fp == NULL){
+	            printf("Erro na abertura do arquivo. Programa encerrado. \n");
+	            exit(1);
+	        }
 
-            ////////////////////////////////////////// Enviar o conteudo do arquivo recebido
+	        // Envia o conteudo do arquivo recebido
 
+	        /*
+			Function fread():
+			size_t fread(void *ptr, size_t size, size_t n, FILE *fp);
+			sizeof(char) = 1 byte;
+	        */
 
+	        while( (fread(buffer,sizeof(char),sizeof(buffer),fp)) != 0 ){	// Lê o proximo pedaço da msg e coloca em buffer
+	        	status = send(clientfd, buffer, strlen(buffer), 0);			// Envia o buffer lido
+	            memset(buffer, 0x0, BUFFERSIZE);							// Zera o buffer
+	        }
 
-          
-        } while(1); // While até receber um nome válido de um arquivo
+			fclose(fp);	// fecha arquivo de leitura
 
-    //Envio dos dados do arquivo
-        do {
-/*
-            for (i = 0; i <= BUFFERSIZE-1; i++){
-
-                buffer[i] = fgetc(fp);
-
-                if( feof(fp) ) { 
-                    flag = 1;
-                    break;
-                }
-            }
-*/
-            if (flag == 1){
-            	send(clientfd, buffer, i, 0);	// Testar o retorno dessa funcao
-            	break;
-            }
-
-            send(clientfd, buffer, i, 0);	// Testar o retorno dessa funcao
-
-            memset(buffer, 0x0, BUFFERSIZE);	// Zera o buffer
-           
-        } while(1);
+        }
+    } else {
+    	printf("Conexão falhou. Programa encerrado \n");
+    	exit(1);
     }
 
 
-//Fechando conexão 
+// Fecha a conexão
+
     close(clientfd);
     close(serverfd);
-    gettimeofday(&end,NULL);	// Testar o retorno dessa funcao
 
+    printf("Conexao fechada.\n");
+
+    gettimeofday(&end,NULL);
 
     printf("%ld segundos; %d bits \n", ((end.tv_sec * 1000000 + end.tv_usec)
           - (start.tv_sec * 1000000 + start.tv_usec))/1000000,i);
     
-
 	return 0;
 }
 
