@@ -4,17 +4,17 @@
 #include <netdb.h>
 
 #include <stdio.h>
-#include <string.h>	// strcpy, strlen, strcat
+#include <string.h>	// strcpy(), strlen(), strcat()
 #include <stdlib.h>
 
 #include <unistd.h>
 #include <errno.h>
-#include <sys/time.h> 
+#include <sys/time.h> // gettimeofday()
 
 #include <netinet/in.h>
-#include <arpa/inet.h> // inet_addr
+#include <arpa/inet.h> // inet_addr()
 
-#define BUFFER_SIZE 100
+#define BUFFER_SIZE 1024
 #define PORT 4242
 #define ADDR_SERVER "127.0.0.1"
 
@@ -26,9 +26,13 @@ int main(int argc, char const *argv[]) {
 
 	char buffer[BUFFER_SIZE];
 
-	char FILE_NAME[] = "arquivoTeste2.txt";
+	char FILE_NAME[] = "arquivoTeste1.txt";
 
 	int status = 0;
+
+	struct timeval start, end;
+
+    gettimeofday(&start, NULL);
 
 	FILE * fp;
 
@@ -73,6 +77,9 @@ int main(int argc, char const *argv[]) {
 
 	status = recv(socket_fd, buffer, BUFFER_SIZE, 0); // receive presentation msg from server // teste erro -1
 
+	int bytes_recv_total = 0;
+	int bytes_recv = 0;
+	
 	if (status != -1) {
 		
 		status = send(socket_fd, FILE_NAME, sizeof(FILE_NAME), 0); // Envia nome do arquivo a ser aberto: string terminada em /0
@@ -99,21 +106,15 @@ int main(int argc, char const *argv[]) {
 			Internally, the function interprets the block pointed by ptr as if it was an array of (size*count) 
 			elements of type unsigned char, and writes them sequentially to stream as if fputc was called for each byte.
 		*/
-	    /*
+
 		// Grava conteudo do arquivo recebido
-		while(msg_length > 0){
-			fwrite(buffer, 1, BUFFER_SIZE-1, fp);		// testar
-			//buffer[sizeof(buffer)-1] = '\0';
-			//memset(buffer, 0x0, BUFFER_SIZE); 						// zera o buffer
-			msg_length = recv(socket_fd, buffer, BUFFER_SIZE, 0); 	// rcv content
-		}
-		*/
-		//memset(buffer, 0x0, BUFFER_SIZE); // zera o buffer
-		int tam = 0;
+
+
 		while( (recv(socket_fd, buffer, BUFFER_SIZE, 0)) > 0 ){
-			tam = fwrite(buffer, sizeof(char), strlen(buffer)/sizeof(char), fp);
-			//memset(buffer, 0, BUFFER_SIZE);
-			printf("%d\n", tam);
+			bytes_recv = fwrite(buffer, sizeof(char), strlen(buffer)/sizeof(char), fp);
+					
+			bytes_recv_total += bytes_recv;
+			//printf("%d - %d\n", bytes_recv, bytes_recv_total);
 		}
 
 		fclose(fp);	// fecha arquivo de escrita
@@ -124,7 +125,13 @@ int main(int argc, char const *argv[]) {
 	}
 
 	close(socket_fd);
+
 	printf("Conexao fechada.\n");
+
+	gettimeofday(&end,NULL);
+
+    printf(" %.4f segundos\n %d bytes recebidos\n", 
+      ((end.tv_sec + end.tv_usec * 1e-6) - (start.tv_sec + start.tv_usec * 1e-6)), bytes_recv_total);
 	
 	return 0;
 }
