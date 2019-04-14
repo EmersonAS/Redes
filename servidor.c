@@ -1,23 +1,22 @@
-#include <sys/types.h>
+
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h>
 
 #include <stdio.h>
-#include <string.h>		// strcpy, strlen
-#include <stdlib.h>
+#include <string.h>		// strcpy(), strlen()
+#include <stdlib.h>   // exit()
 
-#include <unistd.h>
-#include <errno.h>
+#include <unistd.h>   // close(socket_fd)
 #include <sys/time.h> // gettimeofday()
 
-#define BUFFERSIZE 1024
 #define BACKLOG 5
 
 
 int main(int argc, char *argv[]) {
 
     struct sockaddr_in serveraddr, clientaddr;
+    int serverfd, clientfd;
+    int status = 0;
 
     // Address format: An IP socket address is defined as a combination...
     // ...of an IP interface address and a 16-bit port number
@@ -34,16 +33,13 @@ int main(int argc, char *argv[]) {
     struct in_addr {
         uint32_t	s_addr;			// address in network byte order
     };
-
+ 
     */
 
-    char buffer[BUFFERSIZE];
+    int PORT = atoi(argv[1]);
+    int BUFFER_SIZE = atoi(argv[2]);
 
-    int serverfd, clientfd;
-
-    int status = 0;
-
-    int porta = 4242;
+    char buffer[BUFFER_SIZE];
 
     struct timeval start, end;
 
@@ -72,7 +68,7 @@ int main(int argc, char *argv[]) {
        * um ponto final (end point). Vai receber um descritor de soquete com base IPV4                                    *
        ********************************************************************/
 
-    serverfd = socket(AF_INET, SOCK_STREAM, 0);  
+    serverfd = socket(AF_INET, SOCK_STREAM, 0);
     
     if (serverfd == -1)
     {
@@ -103,7 +99,7 @@ int main(int argc, char *argv[]) {
 
     // preenche os campos da struct socket addr serveraddr
     serveraddr.sin_family = AF_INET;		// AF_INET: IPv4 Internet protocols
-    serveraddr.sin_port   = htons(porta);	// htons: converts the unsigned short integer porta from host byte order to network byte order
+    serveraddr.sin_port   = htons(PORT);	// htons: converts the unsigned short integer PORT from host byte order to network byte order
 
     /*
     When a socket is created with socket(...), it exists in a name space
@@ -178,7 +174,7 @@ int main(int argc, char *argv[]) {
     src: string which will be copied.
 
 	*/
-    strcpy(buffer, "Estabelecendo conexão ...\n\0");
+    
 
     /* send(): used to send/transmit a message to another socket. 
 	
@@ -201,6 +197,7 @@ int main(int argc, char *argv[]) {
     //ssize_t bytes_sent = 0;	// signed size_t == ssize_t
     // int strlen(const char *str): calculates the length of a given string, returns this length
 
+    strcpy(buffer, "Estabelecendo conexão...\n\0");
     status = send(clientfd, buffer, strlen(buffer), 0);
 
     int bytes_sent_total = 0;
@@ -219,8 +216,9 @@ int main(int argc, char *argv[]) {
 
         */
 
+        //memset(buffer, 0, BUFFER_SIZE);
         int file_name_length;
-        file_name_length = recv(clientfd, buffer, BUFFERSIZE, 0);
+        file_name_length = recv(clientfd, buffer, BUFFER_SIZE, 0);
 
         if(file_name_length > 0) {
             //buffer[file_name_length - 1] = '\0';	// to indicate the end of the msg received
@@ -240,17 +238,13 @@ int main(int argc, char *argv[]) {
       			size_t fread(void *ptr, size_t size, size_t n, FILE *fp);
       			sizeof(char) = 1 byte;
       	        */
-            memset(buffer, 0, BUFFERSIZE);
-            while( (bytes_sent = fread(buffer, sizeof(char), (BUFFERSIZE-1)/sizeof(char), fp)) > 0 ){  // Lê o proximo pedaço da msg e coloca em buffer
-              buffer[BUFFERSIZE-1] = '\0';
-              status = send(clientfd, buffer, BUFFERSIZE, 0);     // Envia o buffer lido
-              memset(buffer, 0, BUFFERSIZE);
-
+            memset(buffer, 0, BUFFER_SIZE);
+            while( (bytes_sent = fread(buffer, sizeof(char), (BUFFER_SIZE-1)/sizeof(char), fp)) > 0 ){  // Lê o proximo pedaço da msg e coloca em buffer
+              buffer[BUFFER_SIZE-1] = '\0';
+              status = send(clientfd, buffer, BUFFER_SIZE, 0);     // Envia o buffer lido
+              memset(buffer, 0, BUFFER_SIZE);
               bytes_sent_total += bytes_sent;
-              
             }
-
-            fclose(fp);	// fecha arquivo de leitura
 
         } else {
           printf("Nome de arquivo invalido.\n");
@@ -264,8 +258,9 @@ int main(int argc, char *argv[]) {
 
 // Fecha a conexão
 
-    close(clientfd);
-    close(serverfd);
+    close(clientfd);  // fecha socket cliente
+    close(serverfd);  // fecha socket servidor
+    fclose(fp);       // fecha arquivo de leitura
 
     printf("Conexao fechada.\n");
 
@@ -285,7 +280,7 @@ int main(int argc, char *argv[]) {
 2 - setsockopt: 		https://linux.die.net/man/3/setsockopt
 3 - socket: 			http://man7.org/linux/man-pages/man2/socket.2.html
 4 - Linux IPv4: 		http://man7.org/linux/man-pages/man7/ip.7.html
-5 - Byte order htons(): http://man7.org/linux/man-pages/man3/htons.3.html
+5 - htons():  http://man7.org/linux/man-pages/man3/htons.3.html
 6 - bind: 				http://man7.org/linux/man-pages/man2/bind.2.html
 7 - listen: 			http://man7.org/linux/man-pages/man2/listen.2.html
 8 - send:				http://man7.org/linux/man-pages/man2/send.2.html
@@ -294,8 +289,5 @@ int main(int argc, char *argv[]) {
 11 - fread:				https://www.geeksforgeeks.org/fread-function-in-c/
 12 - connect:			http://man7.org/linux/man-pages/man2/connect.2.html
 13 - gettimeofday: http://man7.org/linux/man-pages/man2/gettimeofday.2.html
-14
-15
-
 
 */
