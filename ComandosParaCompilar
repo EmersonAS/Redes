@@ -2,9 +2,7 @@
 gcc servidor.c -o servidor
 gcc cliente.c -o cliente
 
-./server 4242 1024
-./client 127.0.0.1 4242 arquivoTeste1.txt 1024
-
-
+./servidor 4242 1024
+./cliente 127.0.0.1 4242 arquivoTeste1.txt 1024
 
 
