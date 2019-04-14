@@ -1,34 +1,33 @@
-#include <sys/types.h>
+
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h>
+#include <arpa/inet.h> // inet_addr()
 
 #include <stdio.h>
 #include <string.h>	// strcpy(), strlen(), strcat()
 #include <stdlib.h>
 
 #include <unistd.h>
-#include <errno.h>
 #include <sys/time.h> // gettimeofday()
 
-#include <netinet/in.h>
-#include <arpa/inet.h> // inet_addr()
-
-#define BUFFER_SIZE 1024
-#define PORT 4242
-#define ADDR_SERVER "127.0.0.1"
+#define MAX_NAME_LENGTH 100
 
 
 int main(int argc, char const *argv[]) {
 
 	struct sockaddr_in server_addr;
 	int socket_fd;
+	int status = 0;
+
+	const char *IP_ADDR = argv[1];
+	int PORT = atoi(argv[2]);
+	
+	char FILE_NAME[MAX_NAME_LENGTH];
+	strcpy(FILE_NAME, argv[3]);
+	
+	int BUFFER_SIZE = atoi(argv[4]);
 
 	char buffer[BUFFER_SIZE];
-
-	char FILE_NAME[] = "arquivoTeste1.txt";
-
-	int status = 0;
 
 	struct timeval start, end;
 
@@ -40,7 +39,7 @@ int main(int argc, char const *argv[]) {
 	
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(PORT);
-	server_addr.sin_addr.s_addr = inet_addr(ADDR_SERVER);
+	server_addr.sin_addr.s_addr = inet_addr(IP_ADDR);
 
 	/*
 	IP ADDR OF SERVER HOST:
@@ -91,11 +90,7 @@ int main(int argc, char const *argv[]) {
 	        printf("Erro na abertura do arquivo. Programa encerrado.\n");
 	        exit(1);
 	    }
-	    /*
-	    int msg_length = 0;
-	    
-		msg_length = recv(socket_fd, buffer, BUFFER_SIZE, 0); // rcv content
-		*/
+
 		/*
 		size_t fwrite ( const void * ptr, size_t size, size_t count, FILE * stream );
 			Writes an array of count elements, each one with a size of size bytes, 
@@ -107,24 +102,19 @@ int main(int argc, char const *argv[]) {
 			elements of type unsigned char, and writes them sequentially to stream as if fputc was called for each byte.
 		*/
 
-		// Grava conteudo do arquivo recebido
-
-
-		while( (recv(socket_fd, buffer, BUFFER_SIZE, 0)) > 0 ){
+		// Grava dados recebidos no arquivo de saida
+		while( (status = recv(socket_fd, buffer, BUFFER_SIZE, 0)) > 0 ){
 			bytes_recv = fwrite(buffer, sizeof(char), strlen(buffer)/sizeof(char), fp);
-					
 			bytes_recv_total += bytes_recv;
-			//printf("%d - %d\n", bytes_recv, bytes_recv_total);
 		}
-
-		fclose(fp);	// fecha arquivo de escrita
 
 	} else {
 		printf("Conexao falhou. Programa encerrado.\n");
 		exit(1);
 	}
 
-	close(socket_fd);
+	close(socket_fd);	// fecha a conexao
+	fclose(fp);			// fecha arquivo de escrita
 
 	printf("Conexao fechada.\n");
 
