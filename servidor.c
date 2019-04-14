@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     int PORT = atoi(argv[1]);
     int BUFFER_SIZE = atoi(argv[2]);
 
-    char buffer[BUFFER_SIZE];
+    char buffer[BUFFER_SIZE];     // buffer para armazenar tempoariamente as msgs enviadas/recebidas
 
     struct timeval start, end;    // Estruturas com variáveis tv_sec (tipo time_t) e tv_usec (tipo suseconds_t)
 
@@ -29,19 +29,22 @@ int main(int argc, char *argv[]) {
 
     /****************************************************************************
     * A função socket() retorna um descritor de socket, que representa um       *
-    * ponto final (end point). Vai receber um descritor de socket com base IPV4 *
+    * ponto final (end point), com base IPV4.                                   *
     ****************************************************************************/
 
     // Domínio de comunicação: AF_INET (protocolo IPv4)
     // Tipo de comunicação: SOCK_STREAM: TCP (Reliable, Connection oriented)
     // Valor do Protocolo para o IP: 0
 
+    printf("Inicializando o servidor.\n");
+
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
                                                 
     if (server_fd == -1) {
-        printf("Estabelecimento do socket falhou! Programa encerrado.\n");
+        printf("Estabelecimento do socket falhou.\n");
         exit(1);
     }
+    printf("Socket do servidor criado com sucesso.\n");
 
     /****************************************************************************
     * Manipula as opções do socket referenciado por server_fd. Ajuda a detectar *
@@ -52,7 +55,7 @@ int main(int argc, char *argv[]) {
     status = setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
     
     if (status == -1) {
-        printf("Socket options falhou. Programa encerrado.\n");
+        printf("Alterar socket options falhou.\n");
         exit(1);
     }
 
@@ -75,8 +78,8 @@ int main(int argc, char *argv[]) {
 
     status = bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr));
 
-	  if (status == -1) {
-		    printf("Binding process falhou. Programa encerrado.\n");
+	if (status == -1) {
+	    printf("Binding socket to addr falhou.\n");
         exit(1);
     }
 
@@ -90,9 +93,10 @@ int main(int argc, char *argv[]) {
     status = listen(server_fd, BACKLOG);
 
     if (status == -1) {
-        printf("Listening process falhou. Programa encerrado.\n");
+        printf("Listening process falhou.\n");
         exit(1);
     }
+    printf("Escutando na porta: %d\n", PORT);
     
     /************************************************************************************
     * Accept() extrai a primeira requisição de conexão da fila para o socket que está   *
@@ -106,15 +110,14 @@ int main(int argc, char *argv[]) {
     client_fd = accept(server_fd, (struct sockaddr *) &client_addr, &client_len);
 
     if (client_fd == -1) {
-        printf("Accept connection falhou! Programa encerrado.\n");
+        printf("Accept connection falhou.\n");
         exit(1);
     }
     
     /*****************************************************************************************
     * send() é usada para transmitir msgs a outro socket. Para ser enviada, a msg é colocada *
     * em um buffer de tamanho strlen(buffer). Retorna a qtde de bytes enviados em caso de    *
-    * sucesso. Se a msg for muito grande para passada de uma só vez pelo protocolo           *
-    * subjacente, a função retorna um erro e a msg não é transitida.                         *
+    * sucesso.                                                                               *
     *                                                                                        *
     * int strlen(const char *str): calcula o tamanho de uma string, sem considerar o /0.     *
     *****************************************************************************************/
@@ -122,15 +125,15 @@ int main(int argc, char *argv[]) {
     strcpy(buffer, "Estabelecendo conexão...\n\0");
     status = send(client_fd, buffer, strlen(buffer), 0);
 
-    FILE * File_out;
-    int bytes_sent_total = 0;   // Inicializa contador do total de bytes lidos do arquivo
+    FILE * File_out;            // Ponteiro para o arquivo a ser lido
+    int bytes_sent_total = 0;   // Inicializa contador do total de bytes lidos do arquivo (enviados)
     int bytes_sent = 0;         // Inicializa a contagem de bytes lidos do arquivo
 
     if (status != -1) {
         printf("Conexão estabelecida!\n");
 
         /**********************************************************************************
-		    * recv() recebe uma msg de um socket (já conectado), retorna a qtde de bytes      *
+		* recv() recebe uma msg de um socket (já conectado), retorna a qtde de bytes      *
         * recebidos, e os armazena em um buffer de tamanho BUFFER_SIZE.                   *
         **********************************************************************************/
 
@@ -144,7 +147,7 @@ int main(int argc, char *argv[]) {
             File_out = fopen(buffer, "r");	// r+: open a file to update both reading and writing
         	
   	        if(File_out == NULL){
-  	            printf("Erro na abertura do arquivo a ser enviado. Programa encerrado.\n");
+  	            printf("Erro na abertura do arquivo a ser enviado.\n");
   	            exit(1);
   	        }
 
@@ -156,8 +159,9 @@ int main(int argc, char *argv[]) {
                 buffer[BUFFER_SIZE - 1] = '\0';          // Para indicar o término da string
                 
                 status = send(client_fd, buffer, BUFFER_SIZE, 0);  // Envia os bytes lidos
+                
                 if (status == -1) {
-                    printf("Erro ao enviar dados. Programa encerrado.\n");
+                    printf("Erro ao enviar dados.\n");
                     exit(1);
                 }
 
@@ -166,25 +170,25 @@ int main(int argc, char *argv[]) {
             }
 
         } else {
-            printf("Nome de arquivo invalido.\n");
+            printf("Nome de arquivo inválido.\n");
         }
 
     } else {
-        printf("Conexão falhou. Programa encerrado.\n");
+        printf("Conexão falhou.\n");
         exit(1);
     }
 
-    fclose(File_out);   // fecha arquivo de leitura
+    fclose(File_out);   // Fecha arquivo de leitura
 
-    close(client_fd);   // fecha conexão com o socket cliente
-    close(server_fd);   // fecha socket servidor
+    close(client_fd);   // Fecha conexão com o socket cliente
+    close(server_fd);   // Fecha socket servidor
     
-    printf("Conexao fechada.\n");
+    printf("Conexão fechada.\n");
 
     gettimeofday(&end,NULL);      // Inicia a contagem de segundos e microsegundos desde 01/01/1970 00:00:00
 
     // Tempo gasto é dado pela diferença da última com a primeira contagem (end - start)
-    printf(" %.4f segundos\n %d bytes enviados\n", 
+    printf("t = %.4f segundos\nL = %d bytes enviados\n", 
       ((end.tv_sec + end.tv_usec * 1e-6) - (start.tv_sec + start.tv_usec * 1e-6)), bytes_sent_total);
         
 	return 0;
