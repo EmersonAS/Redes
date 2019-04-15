@@ -10,7 +10,7 @@
 #include <sys/time.h> // gettimeofday()
 
 #define BACKLOG 5     // Tamanho máximo da fila de conexões pendentes
-
+#define MAX_NAME_LENGTH 100
 
 int main(int argc, char *argv[]) {
 
@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
         * recebidos, e os armazena em um buffer de tamanho BUFFER_SIZE.                   *
         **********************************************************************************/
 
-        int file_name_length = recv(client_fd, buffer, BUFFER_SIZE, 0);
+        int file_name_length = recv(client_fd, buffer, MAX_NAME_LENGTH, 0);
 
         if(file_name_length > 0) {
             
