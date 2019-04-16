@@ -3,14 +3,14 @@
 #include <netinet/in.h>
 
 #include <stdio.h>
-#include <string.h>		// strcpy(), strlen()
+#include <string.h>	  // strcpy(), strlen()
 #include <stdlib.h>   // exit()
 
 #include <unistd.h>   // close(socket_fd)
 #include <sys/time.h> // gettimeofday()
 
-#define BACKLOG 5     		// Tamanho máximo da fila de conexões pendentes
-#define NAME_LENGTH 100		// Tamanho máximo do nome do arquivo
+#define BACKLOG 5     		    // Tamanho máximo da fila de conexões pendentes
+#define BUFFER_INFO_SIZE 128	// Tamanho máximo do buffer p/ troca de info da conexão e nome do arquivo
 
 int main(int argc, char *argv[]) {
 
@@ -19,11 +19,10 @@ int main(int argc, char *argv[]) {
     int status = 0;                               // Para verificar o retorno das funções
 
     int PORT = atoi(argv[1]);
-    int BUFFER_SIZE = atoi(argv[2]);
+    int BUFFER_DATA_SIZE = atoi(argv[2]);
 
-    char FILE_NAME[NAME_LENGTH] = {0};
-
-    char buffer[BUFFER_SIZE];     // buffer para armazenar tempoariamente as msgs enviadas/recebidas
+    char buffer_Info[BUFFER_INFO_SIZE] = {0};
+    char buffer_Data[BUFFER_DATA_SIZE];     // buffer para armazenar tempoariamente os bytes (conteúdo) das msgs a serem enviadas
 
     struct timeval start, end;    // Estruturas com variáveis tv_sec (tipo time_t) e tv_usec (tipo suseconds_t)
 
@@ -118,16 +117,15 @@ int main(int argc, char *argv[]) {
     
     /*****************************************************************************************
     * send() é usada para transmitir msgs a outro socket. Para ser enviada, a msg é colocada *
-    * em um buffer de tamanho strlen(buffer). Retorna a qtde de bytes enviados em caso de    *
+    * em um buffer_Info de tamanho strlen(buffer_Info). Retorna a qtde de bytes enviados em caso de    *
     * sucesso.                                                                               *
     *                                                                                        *
     * int strlen(const char *str): calcula o tamanho de uma string, sem considerar o /0.     *
     *****************************************************************************************/
-
-    strcpy(buffer, "Estabelecendo conexão...\n\0");
-    status = send(client_fd, buffer, strlen(buffer), 0);
-
-    //memset(buffer, 0, BUFFER_SIZE);   // Limpa o buffer
+    
+    strcpy(buffer_Info, "Estabelecendo conexão...\0");
+    status = send(client_fd, buffer_Info, strlen(buffer_Info), 0);
+    memset(buffer_Info, 0, BUFFER_INFO_SIZE);   // Limpa o buffer
 
     FILE * File_out;            // Ponteiro para o arquivo a ser lido
     int bytes_sent_total = 0;   // Inicializa contador do total de bytes lidos do arquivo (enviados)
@@ -141,42 +139,43 @@ int main(int argc, char *argv[]) {
         * recebidos, e os armazena em um buffer de tamanho BUFFER_SIZE.                   *
         **********************************************************************************/
 
-        // Recebe o nome do arquivo (em pedaços ou de uma vez caso o tamanho do buffer permita)
-		status = recv(client_fd, FILE_NAME, NAME_LENGTH, 0);
+        // Recebe o nome do arquivo completo
+		status = recv(client_fd, buffer_Info, BUFFER_INFO_SIZE, 0);
 			
 		if (status == -1) {
-            printf("Erro ao receber pedaço do nome do arquivo.\n");
+            printf("Erro ao receber o nome do arquivo.\n");
             exit(1);
         }
 
-        if(strlen(FILE_NAME) > 0) {
+        if(strlen(buffer_Info) > 0) {
             
-            buffer[strlen(FILE_NAME) - 1] = '\0';	     // Indica o fim da msg recebida
-            printf("Nome do arquivo recebido: %s\n", FILE_NAME);
+            printf("Nome do arquivo recebido: %s\n", buffer_Info);
             
-            File_out = fopen(FILE_NAME, "r");
+            File_out = fopen(buffer_Info, "r");
         	
   	        if(File_out == NULL){
   	            printf("Erro na abertura do arquivo a ser enviado.\n");
   	            exit(1);
   	        }
 
-            memset(buffer, 0, BUFFER_SIZE);   // Zera o buffer
+            memset(buffer_Data, 0, BUFFER_DATA_SIZE);   // Limpa o buffer
 
             // Lê o proximo pedaço da msg no arquivo, o coloca em buffer e testa se o arquivo acabou
-            while( (bytes_sent = fread(buffer, sizeof(char), (BUFFER_SIZE-1)/sizeof(char), File_out)) > 0 ){
+            while( (bytes_sent = fread(buffer_Data, sizeof(char), (BUFFER_DATA_SIZE-1)/sizeof(char), File_out)) > 0 ){
                 
-                buffer[BUFFER_SIZE - 1] = '\0';          // Para indicar o término da string
+                //buffer_Data[((bytes_sent < BUFFER_DATA_SIZE)? bytes_sent : BUFFER_DATA_SIZE)] = '\0';          // Para indicar o término da string
                 
-                status = send(client_fd, buffer, BUFFER_SIZE, 0);  // Envia os bytes lidos
+                status = send(client_fd, buffer_Data, BUFFER_DATA_SIZE, 0);  // Envia os bytes lidos
                 
                 if (status == -1) {
                     printf("Erro ao enviar dados.\n");
                     exit(1);
                 }
+                //printf("Status = %d - bytes_sent = %d - buffer: %s\n", status, bytes_sent, buffer_Data);
 
-                memset(buffer, 0, BUFFER_SIZE);   // Zera o buffer
-                bytes_sent_total += bytes_sent;   // Atualiza total de bytes lido/enviado
+                memset(buffer_Data, 0, BUFFER_DATA_SIZE);   // Limpa o buffer
+                bytes_sent_total += bytes_sent;             // Atualiza total de bytes lido/enviado
+
             }
 
         } else {
