@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <sys/time.h> // gettimeofday()
 
-#define MAX_NAME_LENGTH 100
+#define NAME_LENGTH 100		// Tamanho máximo do nome do arquivo
 
 
 int main(int argc, char const *argv[]) {
@@ -22,7 +22,7 @@ int main(int argc, char const *argv[]) {
 	const char *IP_ADDR = argv[1];
 	int PORT = atoi(argv[2]);
 	
-	char FILE_NAME[MAX_NAME_LENGTH];
+	char FILE_NAME[NAME_LENGTH] = {0};
 	strcpy(FILE_NAME, argv[3]);
 	
 	int BUFFER_SIZE = atoi(argv[4]);
@@ -96,12 +96,40 @@ int main(int argc, char const *argv[]) {
     	*****************************************************************************************/
 
 		// Envia nome do arquivo a ser aberto: string terminada em /0
-		status = send(socket_fd, FILE_NAME, sizeof(FILE_NAME), 0);
-		
-		if (status == -1) {
-            printf("Erro ao enviar o nomde do arquivo.\n");
-            exit(1);
-        }
+		if (BUFFER_SIZE < strlen(FILE_NAME))
+		{
+			int bytes_left = strlen(FILE_NAME);
+			int bytes_to_copy = 0;
+
+			while (bytes_left != 0){
+				
+				bytes_to_copy = (bytes_left > BUFFER_SIZE) ? BUFFER_SIZE : bytes_left;
+				memcpy(buffer, FILE_NAME, bytes_to_copy);
+				FILE_NAME += bytes_to_copy;
+				bytes_left -= bytes_to_copy;
+				
+				buffer[bytes_to_copy - 1] = '\0'; /// FALTA MAIS COISA...
+
+				status = send(socket_fd, buffer, bytes_to_copy, 0);
+
+				if (status == -1) {
+	            	printf("Erro ao enviar pedaço do nomde do arquivo.\n");
+	            	exit(1);
+	        	}
+
+	        	memset(buffer, 0, BUFFER_SIZE);   // Limpa o buffer
+
+			}
+		} else {
+			
+			status = send(socket_fd, FILE_NAME, sizeof(FILE_NAME), 0);
+
+			if (status == -1) {
+	           	printf("Erro ao enviar o nomde completo do arquivo.\n");
+	           	exit(1);
+	        }
+
+		}
         printf("Nome do arquivo enviado.\n");
 
 		char Name[] = "ClientVersion";
