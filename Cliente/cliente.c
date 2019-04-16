@@ -82,7 +82,7 @@ int main(int argc, char const *argv[]) {
 	status = recv(socket_fd, buffer, BUFFER_SIZE, 0); // Recebe apres. inicial do servidor
 	printf("Servidor: %s", buffer);
 
-    //memset(buffer, 0, BUFFER_SIZE);   // Limpa o buffer
+	memset(buffer, 0, BUFFER_SIZE);   // Limpa o buffer
 
 	FILE * File_in;				// Ponteiro para o arquivo a ser gravado
 	int bytes_recv_total = 0;   // Inicializa contador do total de bytes gravados no arquivo (recebidos)
