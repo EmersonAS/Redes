@@ -126,6 +126,8 @@ int main(int argc, char *argv[]) {
 
     strcpy(buffer, "Estabelecendo conexão...\n\0");
     status = send(client_fd, buffer, strlen(buffer), 0);
+    
+    memset(buffer, 0, BUFFER_SIZE);   // Limpa o buffer
 
     FILE * File_out;            // Ponteiro para o arquivo a ser lido
     int bytes_sent_total = 0;   // Inicializa contador do total de bytes lidos do arquivo (enviados)
@@ -149,6 +151,7 @@ int main(int argc, char *argv[]) {
 
             strcat(FILE_NAME, buffer);
 
+            memset(buffer, 0, BUFFER_SIZE);   // Limpa o buffer
             //int file_name_length = recv(client_fd, buffer, BUFFER_SIZE, 0);
 		}
 
