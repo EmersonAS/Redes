@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
 
         if(strlen(FILE_NAME) > 0) {
             
-            //buffer[strlen(FILE_NAME) - 1] = '\0';	     // Indica o fim da msg recebida
+            buffer[strlen(FILE_NAME) - 1] = '\0';	     // Indica o fim da msg recebida
             printf("Nome do arquivo recebido: %s\n", FILE_NAME);
             
             File_out = fopen(FILE_NAME, "r");
