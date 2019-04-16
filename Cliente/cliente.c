@@ -4,13 +4,13 @@
 #include <arpa/inet.h> // inet_addr()
 
 #include <stdio.h>
-#include <string.h>	// strcpy(), strlen(), strcat()
+#include <string.h>	   // strcpy(), strlen(), strcat()
 #include <stdlib.h>
 
 #include <unistd.h>
-#include <sys/time.h> // gettimeofday()
+#include <sys/time.h>  // gettimeofday()
 
-#define NAME_LENGTH 100		// Tamanho máximo do nome do arquivo
+#define BUFFER_INFO_SIZE 128			// Tamanho máximo do buffer p/ troca de info da conexão e nome do arquivo
 
 
 int main(int argc, char const *argv[]) {
@@ -22,12 +22,11 @@ int main(int argc, char const *argv[]) {
 	const char *IP_ADDR = argv[1];
 	int PORT = atoi(argv[2]);
 	
-	char FILE_NAME[NAME_LENGTH] = {0};
-	strcpy(FILE_NAME, argv[3]);
+	char buffer_Info[BUFFER_INFO_SIZE]= {0};
 	
-	int BUFFER_SIZE = atoi(argv[4]);
+	int BUFFER_DATA_SIZE = atoi(argv[4]);
 
-	char buffer[BUFFER_SIZE];		// buffer para armazenar tempoariamente as msgs enviadas/recebidas
+	char buffer_Data[BUFFER_DATA_SIZE];		// buffer para armazenar tempoariamente as msgs enviadas/recebidas
 
 	struct timeval start, end;		// Estruturas com variáveis tv_sec (tipo time_t) e tv_usec (tipo suseconds_t)
 
@@ -79,10 +78,10 @@ int main(int argc, char const *argv[]) {
     * recebidos, e os armazena em um buffer de tamanho BUFFER_SIZE.                   *
     **********************************************************************************/
 
-	status = recv(socket_fd, buffer, BUFFER_SIZE, 0); // Recebe apres. inicial do servidor
-	printf("Servidor: %s", buffer);
+	status = recv(socket_fd, buffer_Info, BUFFER_INFO_SIZE, 0); // Recebe apres. inicial do servidor
+	printf("Servidor: %s\n", buffer_Info);
 
-	memset(buffer, 0, BUFFER_SIZE);   // Limpa o buffer
+	memset(buffer_Info, 0, BUFFER_INFO_SIZE);   // Limpa o buffer
 
 	FILE * File_in;				// Ponteiro para o arquivo a ser gravado
 	int bytes_recv_total = 0;   // Inicializa contador do total de bytes gravados no arquivo (recebidos)
@@ -98,17 +97,20 @@ int main(int argc, char const *argv[]) {
     	*****************************************************************************************/
 
 		// Envia nome do arquivo a ser aberto: string terminada em /0
-		status = send(socket_fd, FILE_NAME, sizeof(FILE_NAME), 0);
+		strcpy(buffer_Info, argv[3]);
+		status = send(socket_fd, buffer_Info, sizeof(buffer_Info), 0);
 
 		if (status == -1) {
-	     	printf("Erro ao enviar o nomde completo do arquivo.\n");
+	     	printf("Erro ao enviar o nome do arquivo.\n");
 	       	exit(1);
 	    }
         printf("Nome do arquivo enviado.\n");
 
 		char Name[] = "ClientVersion";
 		
-		File_in = fopen(strcat(Name,FILE_NAME), "w+");
+		File_in = fopen(strcat(Name, buffer_Info), "w+");
+
+		memset(buffer_Info, 0, BUFFER_INFO_SIZE);   // Limpa o buffer
 
 		if(File_in == NULL){
 	        printf("Erro na abertura do arquivo para gravação.\n");
@@ -116,16 +118,18 @@ int main(int argc, char const *argv[]) {
 	    }
 
 		// Grava dados recebidos no arquivo de saida
-		while( (status = recv(socket_fd, buffer, BUFFER_SIZE, 0)) > 0 ){
+		while( (status = recv(socket_fd, buffer_Data, BUFFER_DATA_SIZE, 0)) > 0 ){
 			
 			if (status == -1) {
                 printf("Erro ao receber dados.\n");
                 exit(1);
             }
 
-            // Grava no arquivo de saída o conteúdo atual (válido - Até o '\0') de buffer
-			bytes_recv = fwrite(buffer, sizeof(char), strlen(buffer)/sizeof(char), File_in);
+            // Grava no arquivo de saída o conteúdo atual de buffer (somente os bytes válidos)
+			bytes_recv = fwrite(buffer_Data, sizeof(char), strlen(buffer_Data)/sizeof(char), File_in);
 			bytes_recv_total += bytes_recv;		// Atualiza total de bytes recebidos/gravado
+
+			//printf("Status = %d - bytes_recv = %d - buffer: %s\n", status, bytes_recv, buffer_Data);
 		}
 
 	} else {
