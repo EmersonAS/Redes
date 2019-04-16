@@ -82,6 +82,8 @@ int main(int argc, char const *argv[]) {
 	status = recv(socket_fd, buffer, BUFFER_SIZE, 0); // Recebe apres. inicial do servidor
 	printf("Servidor: %s", buffer);
 
+    memset(buffer, 0, BUFFER_SIZE);   // Limpa o buffer
+
 	FILE * File_in;				// Ponteiro para o arquivo a ser gravado
 	int bytes_recv_total = 0;   // Inicializa contador do total de bytes gravados no arquivo (recebidos)
 	int bytes_recv = 0;			// Inicializa a contagem de bytes gravados no arquivo
@@ -98,22 +100,23 @@ int main(int argc, char const *argv[]) {
 		// Envia nome do arquivo a ser aberto: string terminada em /0
 		if (BUFFER_SIZE < strlen(FILE_NAME))
 		{
+			char *FILE_NAME_Ptr = FILE_NAME;
 			int bytes_left = strlen(FILE_NAME);
 			int bytes_to_copy = 0;
 
-			while (bytes_left != 0){
+			while (bytes_left > 0){
 				
-				bytes_to_copy = (bytes_left > BUFFER_SIZE) ? BUFFER_SIZE : bytes_left;
-				memcpy(buffer, FILE_NAME, bytes_to_copy);
-				FILE_NAME += bytes_to_copy;
+				bytes_to_copy = (bytes_left > BUFFER_SIZE + 1) ? BUFFER_SIZE-1 : bytes_left;
+				memcpy(buffer, FILE_NAME_Ptr, bytes_to_copy);
+				FILE_NAME_Ptr += bytes_to_copy;
 				bytes_left -= bytes_to_copy;
 				
-				buffer[bytes_to_copy - 1] = '\0'; /// FALTA MAIS COISA...
+				//buffer[bytes_to_copy] = '\0';
 
-				status = send(socket_fd, buffer, bytes_to_copy, 0);
+				status = send(socket_fd, buffer, strlen(buffer), 0);
 
 				if (status == -1) {
-	            	printf("Erro ao enviar pedaço do nomde do arquivo.\n");
+	            	printf("Erro ao enviar pedaço do nome do arquivo.\n");
 	            	exit(1);
 	        	}
 
