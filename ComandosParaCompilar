@@ -3,6 +3,6 @@ gcc servidor.c -o servidor
 gcc cliente.c -o cliente
 
 ./servidor 4242 1024
-./cliente 127.0.0.1 4242 arquivoTeste1.txt 1024
+./cliente 127.0.0.1 4242 10mb.txt 1024
 
 
