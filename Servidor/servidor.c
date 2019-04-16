@@ -9,8 +9,8 @@
 #include <unistd.h>   // close(socket_fd)
 #include <sys/time.h> // gettimeofday()
 
-#define BACKLOG 5     // Tamanho máximo da fila de conexões pendentes
-#define MAX_NAME_LENGTH 100
+#define BACKLOG 5     		// Tamanho máximo da fila de conexões pendentes
+#define NAME_LENGTH 100		// Tamanho máximo do nome do arquivo
 
 int main(int argc, char *argv[]) {
 
@@ -20,6 +20,8 @@ int main(int argc, char *argv[]) {
 
     int PORT = atoi(argv[1]);
     int BUFFER_SIZE = atoi(argv[2]);
+
+    char FILE_NAME[NAME_LENGTH] = {0};
 
     char buffer[BUFFER_SIZE];     // buffer para armazenar tempoariamente as msgs enviadas/recebidas
 
@@ -137,14 +139,26 @@ int main(int argc, char *argv[]) {
         * recebidos, e os armazena em um buffer de tamanho BUFFER_SIZE.                   *
         **********************************************************************************/
 
-        int file_name_length = recv(client_fd, buffer, MAX_NAME_LENGTH, 0);
+        // Recebe o nome do arquivo (em pedaços ou de uma vez caso o tamanho do buffer permita)
+		while( (status = recv(client_fd, buffer, BUFFER_SIZE, 0)) > 0 ){
+			
+			if (status == -1) {
+                printf("Erro ao receber pedaço do nome do arquivo.\n");
+                exit(1);
+            }
 
-        if(file_name_length > 0) {
+            strcat(FILE_NAME, buffer);
+
+            //int file_name_length = recv(client_fd, buffer, BUFFER_SIZE, 0);
+		}
+
+
+        if(strlen(FILE_NAME) > 0) {
             
-            buffer[file_name_length - 1] = '\0';	             // Indica o fim da msg recebida
-            printf("Nome do arquivo recebido: %s\n", buffer);
+            //buffer[strlen(FILE_NAME) - 1] = '\0';	             // Indica o fim da msg recebida
+            printf("Nome do arquivo recebido: %s\n", FILE_NAME);
             
-            File_out = fopen(buffer, "r");	// r+: open a file to update both reading and writing
+            File_out = fopen(FILE_NAME, "r");
         	
   	        if(File_out == NULL){
   	            printf("Erro na abertura do arquivo a ser enviado.\n");
