@@ -126,8 +126,8 @@ int main(int argc, char *argv[]) {
 
     strcpy(buffer, "Estabelecendo conexão...\n\0");
     status = send(client_fd, buffer, strlen(buffer), 0);
-    
-    memset(buffer, 0, BUFFER_SIZE);   // Limpa o buffer
+
+    //memset(buffer, 0, BUFFER_SIZE);   // Limpa o buffer
 
     FILE * File_out;            // Ponteiro para o arquivo a ser lido
     int bytes_sent_total = 0;   // Inicializa contador do total de bytes lidos do arquivo (enviados)
@@ -142,23 +142,16 @@ int main(int argc, char *argv[]) {
         **********************************************************************************/
 
         // Recebe o nome do arquivo (em pedaços ou de uma vez caso o tamanho do buffer permita)
-		while( (status = recv(client_fd, buffer, BUFFER_SIZE, 0)) > 0 ){
+		status = recv(client_fd, FILE_NAME, NAME_LENGTH, 0);
 			
-			if (status == -1) {
-                printf("Erro ao receber pedaço do nome do arquivo.\n");
-                exit(1);
-            }
-
-            strcat(FILE_NAME, buffer);
-
-            memset(buffer, 0, BUFFER_SIZE);   // Limpa o buffer
-            //int file_name_length = recv(client_fd, buffer, BUFFER_SIZE, 0);
-		}
-
+		if (status == -1) {
+            printf("Erro ao receber pedaço do nome do arquivo.\n");
+            exit(1);
+        }
 
         if(strlen(FILE_NAME) > 0) {
             
-            //buffer[strlen(FILE_NAME) - 1] = '\0';	             // Indica o fim da msg recebida
+            //buffer[strlen(FILE_NAME) - 1] = '\0';	     // Indica o fim da msg recebida
             printf("Nome do arquivo recebido: %s\n", FILE_NAME);
             
             File_out = fopen(FILE_NAME, "r");
