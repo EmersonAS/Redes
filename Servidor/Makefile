@@ -1,3 +1,3 @@
 program:
 	gcc servidorFTP.c -o servidorFTP
-	./servidorFTP 4040 100
+	./servidorFTP 4040 256
