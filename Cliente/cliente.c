@@ -16,17 +16,17 @@
 int main(int argc, char const *argv[]) {
 
 	struct sockaddr_in server_addr; 	// Estruturas do tipo endereço de socket
-	int socket_fd;						// Descritor de socket (equivalente a um HANDLE)
+	int socket_fd;						// Descritor de socket (Referencia u socket, equivalente a um HANDLE)
 	int status = 0;                     // Para verificar o retorno das funções
 
-	const char *IP_ADDR = argv[1];
+	const char *IP_ADDR = argv[1];		// Endereço IP do 
 	int PORT = atoi(argv[2]);
 	
-	char buffer_Info[BUFFER_INFO_SIZE]= {0};
+	char buffer_Info[BUFFER_INFO_SIZE]= {0};	// buffer p/ troca de info da conexão e nome do arquivo
 	
 	int BUFFER_DATA_SIZE = atoi(argv[4]);
 
-	char buffer_Data[BUFFER_DATA_SIZE];		// buffer para armazenar tempoariamente as msgs enviadas/recebidas
+	char buffer_Data[BUFFER_DATA_SIZE];			// buffer p/ armazenar temporariamente os dados as serem enviados/recebidos do arquivo
 
 	struct timeval start, end;		// Estruturas com variáveis tv_sec (tipo time_t) e tv_usec (tipo suseconds_t)
 
@@ -34,7 +34,7 @@ int main(int argc, char const *argv[]) {
 
     /****************************************************************************
     * A função socket() retorna um descritor de socket, que representa um       *
-    * ponto final (end point), com base IP4.                                    *
+    * ponto final (end point), com base em IP4.                                    *
     ****************************************************************************/
 
     // Domínio de comunicação: AF_INET (protocolo IPv4)
@@ -46,7 +46,7 @@ int main(int argc, char const *argv[]) {
 	socket_fd = socket(AF_INET, SOCK_STREAM, 0);
 	
 	if (socket_fd == -1) {
-		printf("Estabelecimento so socket falhou.\n");
+		printf("Estabelecimento do socket falhou.\n");
         exit(1);
 	}
 	printf("Socket do cliente criado com sucesso.\n");
