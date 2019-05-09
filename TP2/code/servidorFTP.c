@@ -1,7 +1,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-//#include <string.h>
+#include <string.h>
 #include <netinet/in.h>
 
 #include "tp_socket.h"
@@ -51,22 +51,20 @@ int main(int argc, char const *argv[]) {
     printf("Socket do servidor criado com sucesso.\n");
 
     /*
-    FILE * File_out;            // Ponteiro para o arquivo a ser lido
-    int bytes_sent_total = 0;   // Inicializa contador do total de bytes lidos do arquivo (enviados)
+    FILE * File_read;           // Ponteiro para o arquivo a ser lido
+    int bytes_sent_total = 0;   // Inicializa contador do total de bytes lidos do arquivo ( a serem enviados)
     int bytes_sent = 0;         // Inicializa a contagem de bytes lidos do arquivo
 
     // Recebe o nome do arquivo completo
-	status = tp_recvfrom(socket_fd, buffer_Info, BUFFER_INFO_SIZE, 0);
-	if (status == -1) {
-        printf("Erro ao receber o nome do arquivo.\n");
+	if ((tp_recvfrom(socket_fd, buffer_Info, BUFFER_INFO_SIZE, &newAddr)) < 0) {
+        printf("File name not received.\n");
         exit(1);
     }
-    printf("Nome do arquivo recebido: %s\n", buffer_Info);
+    printf("File name received: %s\n", buffer_Info);
             
-    File_out = fopen(buffer_Info, "r");
-        	
-  	if(File_out == NULL){
-  	    printf("Erro na abertura do arquivo a ser enviado.\n");
+    File_read = fopen(buffer_Info, "r");
+  	if(File_read == NULL){
+  	    printf("Can not open file.\n");
   	    exit(1);
   	}
     */
@@ -93,11 +91,11 @@ int main(int argc, char const *argv[]) {
             scanf("%s", buffer_Data);
             strcpy(frame_send.packet.data, buffer_Data);
 
-            tp_sendto(socket_fd, (char *) &frame_send, sizeof(Frame), &server_addr);
+            tp_sendto(socket_fd, (char *) &frame_send, sizeof(Frame), &newAddr);
             printf("Frame sent\n");
         }
         //int addr_size = sizeof(server_addr);
-        int f_recv_size = tp_recvfrom(socket_fd, (char *) &frame_recv, sizeof(Frame), &server_addr);
+        int f_recv_size = tp_recvfrom(socket_fd, (char *) &frame_recv, sizeof(Frame), &newAddr);
         
         if (f_recv_size > 0 && frame_recv.seq_no == 0 && frame_recv.ack == frame_id + 1){
             printf("ACK Received\n");
