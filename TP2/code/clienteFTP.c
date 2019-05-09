@@ -62,33 +62,26 @@ int main(int argc, char const *argv[]) {
     status = tp_sendto(socket_fd, buffer_Info, BUFFER_INFO_SIZE, &server_addr);
     
 
-	int frame_id = 0;
+    /* LÓGICA DO STOP-AND-WAIT */
+
+    int frame_id = 0;
     Frame frame_send;
     Frame frame_recv;
-    int ack_recv = 1;
-
+    
     while(1){
-        if (ack_recv == 1){
-            frame_send.seq_no = frame_id;
-            frame_send.frame_kind = 1;
-            frame_send.ack = 0;
+        int f_recv_size = tp_recvfrom(server_fd, (char *) &frame_recv, sizeof(Frame), &newAddr);
 
-            printf("Enter data: ");
-            scanf("%s", buffer_Data);
-            strcpy(frame_send.packet.data, buffer_Data);
+        if (f_recv_size > 0 && frame_recv.frame_kind == 1 && frame_recv.seq_no == frame_id){
+            printf("Frame Received: %s\n", frame_recv.packet.data);
 
-            tp_sendto(socket_fd, (char *) &frame_send, sizeof(Frame), &server_addr);
-            printf("Frame sent\n");
-        }
-        int addr_size = sizeof(server_addr);
-        int f_recv_size = tp_recvfrom(socket_fd, (char *) &frame_recv, sizeof(Frame), &server_addr);
-        
-        if (f_recv_size > 0 && frame_recv.seq_no == 0 && frame_recv.ack == frame_id + 1){
-            printf("ACK Received\n");
-            ack_recv = 1;
+            frame_send.seq_no = 0;
+            frame_send.frame_kind = 0;
+            frame_send.ack = frame_recv.seq_no + 1;
+
+            tp_sendto(server_fd, (char *) &frame_send, sizeof(Frame), &newAddr);
+            printf("ACK Sent\n");
         } else {
-            printf("ACK Not Received\n");
-            ack_recv = 1;
+            printf("Frame Not Received\n");
         }
         frame_id++;
     }
