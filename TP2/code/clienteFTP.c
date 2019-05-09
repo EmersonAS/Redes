@@ -64,12 +64,25 @@ int main(int argc, char const *argv[]) {
 
     /* LÓGICA DO STOP-AND-WAIT */
 
+
+    /* Início - Lógica do Temporizador */
+
+    /*
+    int timeout = 1;                // 1s
+    struct timeval temporizador;
+    temporizador.tv_sec = timeout;
+    temporizador.tv_usec = 0;
+    setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*) &temporizador, sizeof(temporizador));
+    */
+
+    /* Fim - Lógica do Temporizador*/
+
     int frame_id = 0;
     Frame frame_send;
     Frame frame_recv;
     
     while(1){
-        int f_recv_size = tp_recvfrom(server_fd, (char *) &frame_recv, sizeof(Frame), &newAddr);
+        int f_recv_size = tp_recvfrom(socket_fd, (char *) &frame_recv, sizeof(Frame), &server_addr);
 
         if (f_recv_size > 0 && frame_recv.frame_kind == 1 && frame_recv.seq_no == frame_id){
             printf("Frame Received: %s\n", frame_recv.packet.data);
@@ -78,7 +91,7 @@ int main(int argc, char const *argv[]) {
             frame_send.frame_kind = 0;
             frame_send.ack = frame_recv.seq_no + 1;
 
-            tp_sendto(server_fd, (char *) &frame_send, sizeof(Frame), &newAddr);
+            tp_sendto(socket_fd, (char *) &frame_send, sizeof(Frame), &server_addr);
             printf("ACK Sent\n");
         } else {
             printf("Frame Not Received\n");
