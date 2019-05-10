@@ -11,7 +11,7 @@
 
 
 typedef struct packet{
-    char data[512];
+    char data[20];
 } Packet;
 
 
@@ -35,7 +35,8 @@ int main(int argc, char const *argv[]) {
     
     int BUFFER_DATA_SIZE = atoi(argv[4]);
     
-    char buffer_Data[BUFFER_DATA_SIZE];      // EXCLUIR   // buffer p/ armazenar temporariamente os dados as serem enviados/recebidos do arquivo
+//    char buffer_Data[BUFFER_DATA_SIZE];      // EXCLUIR   // buffer p/ armazenar temporariamente os dados as serem enviados/recebidos do arquivo
+
 
     struct timeval start, end;      // Estruturas com variáveis tv_sec (tipo time_t) e tv_usec (tipo suseconds_t)
     gettimeofday(&start, NULL);     // Inicia a contagem de segundos e microsegundos desde 01/01/1970 00:00:00
@@ -78,13 +79,18 @@ int main(int argc, char const *argv[]) {
     Segment segment_send;
     Segment segment_recv;
     
-    while( (tp_recvfrom(client_socket, (char *) &segment_recv, sizeof(Segment), &server_addr)) > 0 ) {
+    int data_to_recv = 1;
+    while(data_to_recv) {
+
+        status = tp_recvfrom(client_socket, (char *) &segment_recv, sizeof(Segment), &server_addr);
 
         if (segment_recv.seq_no == segment_id) {
             
-            printf("\tpkt received:\n %s\n", segment_recv.packet.data);
+            //printf("\tpkt received:\n%s\n", segment_recv.packet.data); // EXCLUIR
+            printf("\tpkt received\n");
             // Grava no arquivo de saída o conteúdo atual de buffer (somente os bytes válidos)
             bytes_recv = fwrite(segment_recv.packet.data, sizeof(char), strlen(segment_recv.packet.data), File_write);
+            
             bytes_recv_total += bytes_recv;     // Atualiza total de bytes recebidos/gravado
 
             segment_send.seq_no = 0;
@@ -97,6 +103,10 @@ int main(int argc, char const *argv[]) {
             printf("\tpkt not received\n");
         }
 
+        if (strlen(segment_recv.packet.data) < 19) {    // BUFFER_DATA_SIZE - 1
+            data_to_recv = 0;
+        }
+
         segment_id++;
     }
 
@@ -105,7 +115,7 @@ int main(int argc, char const *argv[]) {
     gettimeofday(&end, NULL);      // Inicia a contagem de segundos e microsegundos desde 01/01/1970 00:00:00
 
     // Tempo gasto é dado pela diferença da última com a primeira contagem (end - start)
-    printf("t = %.4f segundos\nL = %d bytes enviados\n", 
+    printf("t = %.4f segundos\nL = %d bytes recebidos\n", 
       ((end.tv_sec + end.tv_usec * 1e-6) - (start.tv_sec + start.tv_usec * 1e-6)), bytes_recv_total);
 
 	return 0;
