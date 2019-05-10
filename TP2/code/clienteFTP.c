@@ -3,101 +3,109 @@
 #include <stdlib.h>
 #include <string.h>
 #include <netinet/in.h>
+#include <errno.h>
 
 #include "tp_socket.h"
 
-#define BUFFER_INFO_SIZE 1024	// Tamanho máximo do buffer p/ troca de info da conexão e nome do arquivo
+#define FILE_NAME_SIZE 1024	// Tamanho máximo do buffer p/ envio do nome do arquivo
 
 
 typedef struct packet{
-    char data[10];
+    char data[512];
 } Packet;
 
 
-typedef struct frame {
-    int frame_kind;
+typedef struct segment {
+    Packet packet;
     int seq_no;
     int ack;
-    Packet packet;
-} Frame;
+} Segment;
 
 
 int main(int argc, char const *argv[]) {
 
 	int status = 0;                             // Para verificar o retorno das funções
-	int socket_fd;                     			// Descritor de socket (equivalente a um HANDLE)
+	int client_socket, server_socket;           // Descritor de socket (equivalente a um HANDLE)
     so_addr server_addr;                        // Estrutura do tipo endereço de socket
 
-    const char *IP_ADDR = argv[1];      // Endereço IP do 
+    char *IP_ADDR = (char *) argv[1];           // Endereço IP do 
     int PORT = atoi(argv[2]);
     
-    char buffer_Info[BUFFER_INFO_SIZE]= {0};    // buffer p/ troca de info da conexão e nome do arquivo
+    char file_Name[FILE_NAME_SIZE]= {0};    // buffer p/ envio do nome do arquivo
     
     int BUFFER_DATA_SIZE = atoi(argv[4]);
-    char buffer_Data[BUFFER_DATA_SIZE];         // buffer p/ armazenar temporariamente os dados as serem enviados/recebidos do arquivo
+    
+    char buffer_Data[BUFFER_DATA_SIZE];      // EXCLUIR   // buffer p/ armazenar temporariamente os dados as serem enviados/recebidos do arquivo
 
     //struct timeval start, end;      // Estruturas com variáveis tv_sec (tipo time_t) e tv_usec (tipo suseconds_t)
 
     //gettimeofday(&start, NULL);     // Inicia a contagem de segundos e microsegundos desde 01/01/1970 00:00:00
 
-    status = tp_init();
-    if (status != 0) {
+    if (tp_init() != 0) {
         printf("tp_init failed.\n");
         exit(1);
     }
 
-    socket_fd = tp_socket((unsigned short) PORT);
-    /*
-    if (socket_fd < 0) {
+    if ((client_socket = tp_socket(0)) < 0) {
         printf("tp_socket failed.\n");
         exit(1);
     }
+    printf("\tclient socket created.\n");
+
+    server_socket = tp_build_addr(&server_addr, IP_ADDR, PORT);
+
+    // Envia nome do arquivo para o servidor
+    strcpy(file_Name, argv[3]);
+    status = tp_sendto(client_socket, file_Name, strlen(file_Name), &server_addr);
+
+
+
+
+
+
+    /*
+    FILE * File_write;          // Ponteiro para o arquivo a ser gravado
+    int bytes_recv_total = 0;   // Inicializa contador do total de bytes gravados no arquivo (recebidos)
+    int bytes_recv = 0;         // Inicializa a contagem de bytes gravados no arquivo
+    
+    char Name[] = "ClientVersion";
+    File_write = fopen(strcat(Name, file_Name), "w+");
+
+                    // Grava no arquivo de saída o conteúdo atual de buffer (somente os bytes válidos)
+            bytes_recv = fwrite(buffer_Data, sizeof(char), strlen(buffer_Data), File_write);
+            bytes_recv_total += bytes_recv;     // Atualiza total de bytes recebidos/gravado
+
     */
-    printf("Socket do servidor criado com sucesso.\n");
 
-    tp_build_addr(&server_addr, INADDR_ANY, PORT);
 
-    
-    strcpy(buffer_Info, argv[3]);
-    status = tp_sendto(socket_fd, buffer_Info, BUFFER_INFO_SIZE, &server_addr);
-    
+
 
     /* LÓGICA DO STOP-AND-WAIT */
 
-
-    /* Início - Lógica do Temporizador */
-
-    /*
-    int timeout = 1;                // 1s
-    struct timeval temporizador;
-    temporizador.tv_sec = timeout;
-    temporizador.tv_usec = 0;
-    setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*) &temporizador, sizeof(temporizador));
-    */
-
-    /* Fim - Lógica do Temporizador*/
-
-    int frame_id = 0;
-    Frame frame_send;
-    Frame frame_recv;
+    int segment_id = 0;
+    Segment segment_send;
+    Segment segment_recv;
+    //segment_recv.packet.data = malloc(BUFFER_DATA_SIZE);
+    //segment_send.packet.data = malloc(BUFFER_DATA_SIZE);
     
     while(1){
-        int f_recv_size = tp_recvfrom(socket_fd, (char *) &frame_recv, sizeof(Frame), &server_addr);
+        int f_recv_size = tp_recvfrom(client_socket, (char *) &segment_recv, sizeof(Segment), &server_addr);
 
-        if (f_recv_size > 0 && frame_recv.frame_kind == 1 && frame_recv.seq_no == frame_id){
-            printf("Frame Received: %s\n", frame_recv.packet.data);
+        if (f_recv_size > 0 && segment_recv.seq_no == segment_id){
+            printf("Segment Received: %s\n", segment_recv.packet.data);
 
-            frame_send.seq_no = 0;
-            frame_send.frame_kind = 0;
-            frame_send.ack = frame_recv.seq_no + 1;
+            segment_send.seq_no = 0;
+            segment_send.ack = segment_recv.seq_no + 1;
 
-            tp_sendto(socket_fd, (char *) &frame_send, sizeof(Frame), &server_addr);
+            tp_sendto(client_socket, (char *) &segment_send, sizeof(Segment), &server_addr);
             printf("ACK Sent\n");
         } else {
-            printf("Frame Not Received\n");
+            printf("Segment Not Received\n");
         }
-        frame_id++;
+        segment_id++;
     }
+
+    fclose(File_write);   // Fecha arquivo de gravação
 
     //gettimeofday(&end, NULL);      // Inicia a contagem de segundos e microsegundos desde 01/01/1970 00:00:00
 
@@ -105,5 +113,31 @@ int main(int argc, char const *argv[]) {
     //printf("t = %.4f segundos\nL = %d bytes enviados\n", 
     //  ((end.tv_sec + end.tv_usec * 1e-6) - (start.tv_sec + start.tv_usec * 1e-6)), bytes_sent_total);
 
+    //free(segment_recv.packet.data);
+    //free(segment_send.packet.data);
+
 	return 0;
 }
+
+
+
+    /* Início - Lógica do Temporizador */
+
+    /*
+    int timeout = 5;                // 5s
+    struct timeval temporizador;
+    temporizador.tv_sec = timeout;
+    temporizador.tv_usec = 0;
+    setsockopt(client_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*) &temporizador, sizeof(temporizador));
+    */
+
+    /* Fim - Lógica do Temporizador*/
+
+
+    /* // Identificando um evento de timout
+
+    if (errno == EWOULDBLOCK) {
+        printf("\tError: %s\n", strerror(errno));
+        printf("\tError number: %d\n", errno);
+    }
+    */
