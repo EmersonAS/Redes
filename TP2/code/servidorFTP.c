@@ -12,7 +12,7 @@
 
 
 typedef struct packet{
-    char data[512];
+    char data[20];
 } Packet;
 
 
@@ -78,21 +78,20 @@ int main(int argc, char const *argv[]) {
     int ack_recv = 1;
     int wait_for_ack = 1;
 
-    while( (bytes_sent = fread(segment_send.packet.data, sizeof(char), (BUFFER_DATA_SIZE-1), File_read)) > 0 ) {
+    while( (bytes_sent = fread(segment_send.packet.data, sizeof(char), sizeof(segment_send.packet.data)-1, File_read)) > 0 ) {
         
         bytes_sent_total += bytes_sent;             // Atualiza total de bytes lido/enviado
 
         if (ack_recv == 1){
-            
+
+            segment_send.packet.data[((bytes_sent < 20)? bytes_sent : 20)] = '\0'; //BUFFER_DATA_SIZE = 20 bytes
             segment_send.seq_no = segment_id;
             segment_send.ack = 0;
 
-            //printf("Enter data: ");
-            //scanf("%s", buffer_Data);
-            //strcpy(segment_send.packet.data, buffer_Data);
-
             tp_sendto(server_socket, (char *) &segment_send, sizeof(Segment), &client_addr);
-            printf("\tsegment sent\n");
+            wait_for_ack = 1;
+
+            printf("\tpkt sent\n");
 
         }
 
@@ -114,10 +113,10 @@ int main(int argc, char const *argv[]) {
                 if (errno == EWOULDBLOCK) {
                     tp_sendto(server_socket, (char *) &segment_send, sizeof(Segment), &client_addr);
                     printf("\ttimeout event\n");
-                    printf("\tsegment resent\n");
+                    printf("\tpkt resent\n");
                     wait_for_ack = 1;
                 } else {
-                    printf("\terror: %d: %s\n", errno, strerror(errno));
+                    printf("\terror %d: %s\n", errno, strerror(errno));
                     exit(1);
                 }
             }
