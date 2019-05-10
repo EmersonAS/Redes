@@ -70,7 +70,7 @@ int tp_socket(unsigned short port)
         return -2;
     }
     if (bind(so, (struct sockaddr*)&local_addr, sizeof(local_addr))<0) {
-        return so; // alterado de -3 p/ so
+        return -3;
     }
     return so;
 }
