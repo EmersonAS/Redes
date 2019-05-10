@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <netinet/in.h>
-#include <errno.h>
+#include <sys/time.h>
 
 #include "tp_socket.h"
 
@@ -37,9 +37,8 @@ int main(int argc, char const *argv[]) {
     
     char buffer_Data[BUFFER_DATA_SIZE];      // EXCLUIR   // buffer p/ armazenar temporariamente os dados as serem enviados/recebidos do arquivo
 
-    //struct timeval start, end;      // Estruturas com variáveis tv_sec (tipo time_t) e tv_usec (tipo suseconds_t)
-
-    //gettimeofday(&start, NULL);     // Inicia a contagem de segundos e microsegundos desde 01/01/1970 00:00:00
+    struct timeval start, end;      // Estruturas com variáveis tv_sec (tipo time_t) e tv_usec (tipo suseconds_t)
+    gettimeofday(&start, NULL);     // Inicia a contagem de segundos e microsegundos desde 01/01/1970 00:00:00
 
     if (tp_init() != 0) {
         printf("tp_init failed.\n");
@@ -62,20 +61,13 @@ int main(int argc, char const *argv[]) {
 
 
 
-
-    /*
     FILE * File_write;          // Ponteiro para o arquivo a ser gravado
     int bytes_recv_total = 0;   // Inicializa contador do total de bytes gravados no arquivo (recebidos)
     int bytes_recv = 0;         // Inicializa a contagem de bytes gravados no arquivo
     
     char Name[] = "ClientVersion";
     File_write = fopen(strcat(Name, file_Name), "w+");
-
-                    // Grava no arquivo de saída o conteúdo atual de buffer (somente os bytes válidos)
-            bytes_recv = fwrite(buffer_Data, sizeof(char), strlen(buffer_Data), File_write);
-            bytes_recv_total += bytes_recv;     // Atualiza total de bytes recebidos/gravado
-
-    */
+ 
 
 
 
@@ -85,59 +77,36 @@ int main(int argc, char const *argv[]) {
     int segment_id = 0;
     Segment segment_send;
     Segment segment_recv;
-    //segment_recv.packet.data = malloc(BUFFER_DATA_SIZE);
-    //segment_send.packet.data = malloc(BUFFER_DATA_SIZE);
     
-    while(1){
-        int f_recv_size = tp_recvfrom(client_socket, (char *) &segment_recv, sizeof(Segment), &server_addr);
+    while( (tp_recvfrom(client_socket, (char *) &segment_recv, sizeof(Segment), &server_addr)) > 0 ) {
 
-        if (f_recv_size > 0 && segment_recv.seq_no == segment_id){
-            printf("Segment Received: %s\n", segment_recv.packet.data);
+        if (segment_recv.seq_no == segment_id) {
+            
+            printf("\tpkt received:\n %s\n", segment_recv.packet.data);
+            // Grava no arquivo de saída o conteúdo atual de buffer (somente os bytes válidos)
+            bytes_recv = fwrite(segment_recv.packet.data, sizeof(char), strlen(segment_recv.packet.data), File_write);
+            bytes_recv_total += bytes_recv;     // Atualiza total de bytes recebidos/gravado
 
             segment_send.seq_no = 0;
             segment_send.ack = segment_recv.seq_no + 1;
 
             tp_sendto(client_socket, (char *) &segment_send, sizeof(Segment), &server_addr);
-            printf("ACK Sent\n");
+            printf("\tACK sent\n");
+        
         } else {
-            printf("Segment Not Received\n");
+            printf("\tpkt not received\n");
         }
+
         segment_id++;
     }
 
     fclose(File_write);   // Fecha arquivo de gravação
 
-    //gettimeofday(&end, NULL);      // Inicia a contagem de segundos e microsegundos desde 01/01/1970 00:00:00
+    gettimeofday(&end, NULL);      // Inicia a contagem de segundos e microsegundos desde 01/01/1970 00:00:00
 
     // Tempo gasto é dado pela diferença da última com a primeira contagem (end - start)
-    //printf("t = %.4f segundos\nL = %d bytes enviados\n", 
-    //  ((end.tv_sec + end.tv_usec * 1e-6) - (start.tv_sec + start.tv_usec * 1e-6)), bytes_sent_total);
-
-    //free(segment_recv.packet.data);
-    //free(segment_send.packet.data);
+    printf("t = %.4f segundos\nL = %d bytes enviados\n", 
+      ((end.tv_sec + end.tv_usec * 1e-6) - (start.tv_sec + start.tv_usec * 1e-6)), bytes_recv_total);
 
 	return 0;
 }
-
-
-
-    /* Início - Lógica do Temporizador */
-
-    /*
-    int timeout = 5;                // 5s
-    struct timeval temporizador;
-    temporizador.tv_sec = timeout;
-    temporizador.tv_usec = 0;
-    setsockopt(client_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*) &temporizador, sizeof(temporizador));
-    */
-
-    /* Fim - Lógica do Temporizador*/
-
-
-    /* // Identificando um evento de timout
-
-    if (errno == EWOULDBLOCK) {
-        printf("\tError: %s\n", strerror(errno));
-        printf("\tError number: %d\n", errno);
-    }
-    */
