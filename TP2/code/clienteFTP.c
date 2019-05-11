@@ -86,7 +86,7 @@ int main(int argc, char const *argv[]) {
         char *buffer = strtok(NULL, "\0");
         
         //strcpy(buffer, );
-        printf("%s", buffer);                                            // DELETE
+        //printf("%s", buffer);                                            // DELETE
         
         printf("strcmp(buffer, NULL): %d\n", (buffer == NULL));
 

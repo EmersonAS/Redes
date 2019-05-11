@@ -84,6 +84,19 @@ int main(int argc, char const *argv[]) {
     int ack_recv = 1;
     int wait_for_ack = 1;
 
+    struct timeval temporizador;
+    temporizador.tv_sec = 1; //1 segundo
+    temporizador.tv_usec = 0; // 0 microsegundos
+
+    //SO_RCVTIMEO : aceita uma struct "timeval" que indica o número em segundos e microsegundos a serem esperados até
+    // que uma função se complete.
+    if(setsockopt(server_socket, SOL_SOCKET, SO_RCVTIMEO, (char*) &temporizador, sizeof(temporizador)) < 0){
+	printf("\tsetsockopt failed\n");
+	exit(1);
+    }
+    
+    printf("\tsetsockopt ok\n");
+
     while (data_to_read) {
 
         char tmp[OFFSET];
@@ -103,8 +116,8 @@ int main(int argc, char const *argv[]) {
 
         strcat(segment_send->pkt_data, buffer);
         
-        printf("buffer: %s, bytes_read = %d\n", buffer, bytes_sent);                      // DELETE
-        printf("segment_send->pkt_data (after read): %s\n", segment_send->pkt_data);      // DELETE
+        //printf("buffer: %s, bytes_read = %d\n", buffer, bytes_sent);                      // DELETE
+        //printf("segment_send->pkt_data (after read): %s\n", segment_send->pkt_data);      // DELETE
         
         bytes_sent_total += bytes_sent;             // Atualiza total de bytes lidos
         printf("%d bytes read\n", bytes_sent);
