@@ -3,5 +3,5 @@ gcc -o servidor servidorFTP.c tp_socket.c
 gcc -o cliente clienteFTP.c tp_socket.c
 
 ./servidor 4242 1024
-./cliente 127.0.0.1 4242 10mb.txt 1024
+./cliente 127.0.0.1 4242 small_file.txt 1024
 
