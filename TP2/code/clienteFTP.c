@@ -102,7 +102,6 @@ int main(int argc, char const *argv[]) {
                 tp_sendto(client_socket, segment_send->ack, strlen(segment_send->ack), &server_addr);
                 
                 printf("\tACK_no = %d sent\n", atoi(segment_send->ack));
-               // sleep(1);
                 
             } else {
                 
