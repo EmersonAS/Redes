@@ -74,23 +74,23 @@ int main(int argc, char const *argv[]) {
     segment_recv->pkt_data = (char *) malloc(tam_buffer * sizeof(char) + OFFSET + 1);
     segment_recv->ack = (char *) malloc(30*sizeof(char));
 
-    char buffer[tam_buffer];
+    char buffer[tam_buffer];        // 
 
     // Lógica do Protocolo Stop-and-Wait
 
-    int data_to_read = 1;   // 
-    int ack_recv = 1;       // 
-    int wait_for_ack = 1;   // 
+    int data_to_read = 1;           // 
+    int ack_recv = 1;               // 
+    int wait_for_ack = 1;           // 
 
     struct timeval temporizador;
-    temporizador.tv_sec = 1; //1 segundo
-    temporizador.tv_usec = 0; // 0 microsegundos
+    temporizador.tv_sec = 1;        // 1 segundo
+    temporizador.tv_usec = 0;       // 0 microsegundos
 
     //SO_RCVTIMEO : aceita uma struct "timeval" que indica o número em segundos e microsegundos a serem esperados até
     // que uma função se complete.
     if(setsockopt(server_socket, SOL_SOCKET, SO_RCVTIMEO, (char*) &temporizador, sizeof(temporizador)) < 0){
-    printf("\tsetsockopt failed\n");
-    exit(1);
+        printf("\tsetsockopt failed\n");
+        exit(1);
     }
     
     printf("\tsetsockopt ok\n");
@@ -146,9 +146,9 @@ int main(int argc, char const *argv[]) {
                 }
             } else {
                 if (errno == EWOULDBLOCK) {
-                    tp_sendto(server_socket, segment_send->pkt_data, segment_send->pkt_data_size, &client_addr);
                     printf("\ttimeout event\n");
                     printf("\tpkt resent: seq_no = %d\n", segment_id);
+                    tp_sendto(server_socket, segment_send->pkt_data, segment_send->pkt_data_size, &client_addr);
                     wait_for_ack = 1;
                 } else {
                     printf("\terror %d: %s\n", errno, strerror(errno));
