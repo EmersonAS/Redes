@@ -86,20 +86,24 @@ int main(int argc, char const *argv[]) {
 
         if (buffer != NULL) {
 
-            if (segment_recv->seq_no == segment_id) {
+            if (segment_recv->seq_no <= segment_id) {
 
                 printf("\tpkt received: seq_no = %d\n", segment_recv->seq_no);
                 
+                if (segment_recv->seq_no == segment_id){
                 bytes_recv = fwrite(buffer, sizeof(char), strlen(buffer), File_write);      // Grava no arquivo de saída o conteúdo atual de buffer
 
                 bytes_recv_total += bytes_recv;     // Atualiza total de bytes recebidos/gravado
+                segment_id++;
+                }
 
                 sprintf(segment_send->ack, "%d", segment_recv->seq_no + 1);
 
                 tp_sendto(client_socket, segment_send->ack, strlen(segment_send->ack), &server_addr);
                 
                 printf("\tACK_no = %d sent\n", atoi(segment_send->ack));
-
+               // sleep(1);
+                
             } else {
                 
                 printf("\tpkt not received\n");
@@ -112,7 +116,6 @@ int main(int argc, char const *argv[]) {
             data_to_recv = 0;        
         }
 
-        segment_id++;
     }
 
     fclose(File_write);             // Fecha arquivo de gravação
