@@ -69,7 +69,7 @@ int main(int argc, char const *argv[]) {
     // Protocolo Stop-and-Wait
 
     int segment_id = 0;				// Numero de sequencia do primeiro pacote a ser recebido
-    int data_to_recv = 1;			// Variável para controlar o loop de recebimento dos dados
+    int data_to_recv = 1;			// Variável para controlar o loop de recebimento dos dados e gravação dos dados
 
     while (data_to_recv) {			// Enquanto houver dados para receber
         
