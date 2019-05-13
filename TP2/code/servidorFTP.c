@@ -100,22 +100,14 @@ int main(int argc, char const *argv[]) {
 
         // Acrescenta o caratere de terminação '\0' no fim da string
         buffer[((bytes_sent < tam_buffer)? bytes_sent: tam_buffer)] = '\0';
-
         strcat(segment_send->pkt_data, buffer);     // 
         
         bytes_sent_total += bytes_sent;             // Atualiza total de bytes lidos
 
-        //if (ack_recv == 1) {
-
         segment_send->pkt_data_size = strlen(segment_send->pkt_data);
-
         tp_sendto(server_socket, segment_send->pkt_data, segment_send->pkt_data_size, &client_addr);
-            
         wait_for_ack = 1; // 
-
         printf("\tpkt sent: seq_no = %d\n", segment_id);
-
-        //}
 
         if (data_to_read == 0) {
             wait_for_ack = 0;
