@@ -63,9 +63,9 @@ int main(int argc, char const *argv[]) {
     
     // Inicializa a estrutura do tipo Segment alocando memória para pkt_data de acordo com tam_buffer e OFFSET
 
-    Segment *segment_send = (Segment *) malloc(sizeof(Segment));
-    segment_send->pkt_data = (char *) malloc(tam_buffer * sizeof(char) + OFFSET + 1);
-    segment_send->ack = (char *) malloc(30*sizeof(char));
+    Segment *segment = (Segment *) malloc(sizeof(Segment));
+    segment->pkt_data = (char *) malloc(tam_buffer * sizeof(char) + OFFSET + 1);
+    segment->ack = (char *) malloc(30*sizeof(char));
 
     char buffer[tam_buffer];        // Buffer para leitura dos dados do arquivo
 
@@ -91,64 +91,70 @@ int main(int argc, char const *argv[]) {
 
         char tmp[OFFSET];                       // Armazena o valor de seq_no atual como uma string
         sprintf(tmp, "%d", segment_id);         // Converte o valor de int para string e coloca em tmp - Ex: "0"
-        strcat(segment_send->pkt_data, tmp);    // Concatena o conteúdo de tmp com o de pkt_data (que inicialmente está vazio)
-        strcat(segment_send->pkt_data, ":");    // Concatena ":" com o conteúdo de pkt_data - Ex: "0:\0"
+        strcat(segment->pkt_data, tmp);    // Concatena o conteúdo de tmp com o de pkt_data (que inicialmente está vazio)
+        strcat(segment->pkt_data, ":");    // Concatena ":" com o conteúdo de pkt_data - Ex: "0:\0"
 
+        // Lê um conjunto de bytes do arquivo e coloca em buffer
         if ((bytes_sent = fread(buffer, sizeof(char), tam_buffer - 1, File_read)) <= 0) {
-            data_to_read = 0;
+            data_to_read = 0;   // Não há mais bytes para ler: indica que não há mais dados p/ serem lidos do arquivo
         }
 
         // Acrescenta o caratere de terminação '\0' no fim da string
         buffer[((bytes_sent < tam_buffer)? bytes_sent: tam_buffer)] = '\0';
-        strcat(segment_send->pkt_data, buffer);     // 
+
+        strcat(segment->pkt_data, buffer);     // Concatena os dados lidos com o conteúdo atual de pkt_data - Ex: "0:xyzwabcdef\0"
         
         bytes_sent_total += bytes_sent;             // Atualiza total de bytes lidos
 
-        segment_send->pkt_data_size = strlen(segment_send->pkt_data);
-        tp_sendto(server_socket, segment_send->pkt_data, segment_send->pkt_data_size, &client_addr);
-        wait_for_ack = 1; // 
-        printf("\tpkt sent: seq_no = %d\n", segment_id);
+        segment->pkt_data_size = strlen(segment->pkt_data);   // Tamanho em bytes de pkt_data (seq_no + ":"" + dados)
 
-        if (data_to_read == 0) {
-            wait_for_ack = 0;
+        tp_sendto(server_socket, segment->pkt_data, segment->pkt_data_size, &client_addr);    // Envia os dados (seq_no e dados lidos)
+
+        wait_for_ack = 1;                           // pkt enviado, agora irá aguardar o reconhecimento para esse pkt
+
+        printf("\tpkt sent: seq_no = %d\n", segment_id);    // Informa que o pkt foi enviado e seu seq_no
+
+        if (data_to_read == 0) {    // Se não há mais dados para ler - o último pkt enviado terá buffer nulo - então...
+            wait_for_ack = 0;       // ...não precisa esperar por uma resposta ack - Indica que a transferência de dados terminou
         }
 
-        while(wait_for_ack) {
+        while(wait_for_ack) {       // Enquanto o reconhecimento do pkt enviado não chegar
 
-            status = tp_recvfrom(server_socket, segment_send->ack, (30*sizeof(char)), &client_addr);
+            // Aguarda o recebimento do ack de reconhecimento do pkt enviado
+            status = tp_recvfrom(server_socket, segment->ack, (30*sizeof(char)), &client_addr);
 
-            if (status > 0) {
-                if (atoi(segment_send->ack) == segment_id + 1) {
-                    printf("\tACK_no = %d received\n", atoi(segment_send->ack));
-                    wait_for_ack = 0;
+            if (status > 0) {                                       // Se dados foram recebidos
+                if (atoi(segment->ack) == segment_id + 1) {    // Testa se é o ack esperado do último pkt enviado
+                    printf("\tACK_no = %d received\n", atoi(segment->ack));
+                    wait_for_ack = 0;                               // Se for, libera o envio do próximo pkt - data_to_read continua 1
                 } else {
                     printf("\tACK_no = %d not received\n", segment_id + 1);
-                    wait_for_ack = 1;
+                    wait_for_ack = 1;                               // Senão, continua esperando por um ack válido
                 }
-            } else {
-                if (errno == EWOULDBLOCK) {
-                    printf("\ttimeout event\n");
-                    tp_sendto(server_socket, segment_send->pkt_data, segment_send->pkt_data_size, &client_addr);
+            } else {                                                // Caso tp_recvfrom() retorne com valor -1
+                if (errno == EWOULDBLOCK) {                         // Testa se foi devido ao fim da temporização da função recvfrom()
+                    printf("\ttimeout event\n");                    // Se sim, indica uma perda de pkt, e ele é então reenviado
+                    tp_sendto(server_socket, segment->pkt_data, segment->pkt_data_size, &client_addr);
                     printf("\tpkt resent: seq_no = %d\n", segment_id);
-                    wait_for_ack = 1;
-                } else {
+                    wait_for_ack = 1;                               // E volta-se a aguardar pelo seu ack
+                } else {                                            // Caso o erro seja outro, termina o programa e retorna o código do erro
                     printf("\terror %d: %s\n", errno, strerror(errno));
                     exit(1);
                 }
             }
         }
         
-        memset(buffer, 0x0, strlen(buffer));
-        memset(segment_send->pkt_data, 0x0, strlen(segment_send->pkt_data));
+        memset(buffer, 0x0, strlen(buffer));                                    // 
+        memset(segment->pkt_data, 0x0, strlen(segment->pkt_data));    // 
 
-        segment_id++;
+        segment_id++;       // Incrementa o seq_no do próximo pkt a ser enviado
     }
     
     fclose(File_read);              // Fecha arquivo de leitura
 
-    free(segment_send->pkt_data);   // Desaloca memória para as variáveis membro e a strutura
-    free(segment_send->ack);
-    free(segment_send);
+    free(segment->pkt_data);   // Desaloca memória para as variáveis membro e a strutura
+    free(segment->ack);
+    free(segment);
 
     gettimeofday(&end, NULL);       // Inicia contagem de tempo após o término da transferência dos dados
 
