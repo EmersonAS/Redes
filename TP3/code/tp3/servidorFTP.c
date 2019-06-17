@@ -72,7 +72,7 @@ int main(int argc, char const *argv[]) {
     // Protocolo Stop-and-Wait com retranmissão de pkt (por temporização)
 
     struct timeval temporizador;    // Declara temporizador
-    temporizador.tv_sec = 5;        // timeout_s = 1 segundo
+    temporizador.tv_sec = 1;        // timeout_s = 1 segundo
     temporizador.tv_usec = 0;       // timeout_us = 0 microsegundos
 
     // SO_RCVTIMEO : aceita uma struct "timeval" que indica o número em segundos e microsegundos a serem esperados até
@@ -86,13 +86,9 @@ int main(int argc, char const *argv[]) {
     int segment_id = 0;             // Numero de sequencia do primeiro pacote a ser recebido
     int data_to_read = 1;           // Variável para controlar o loop de leitura e envio dos dados
     int wait_for_ack = 1;           // Variável para controlar o loop de espera por um ack
-int k=0;
-int tam_janela=3;
-    while (data_to_read) {          // Enquanto houver dados para ler e enviar ao cliente
-int j=0;
-k=segment_id;
 
-while(j<tam_janela){
+    while (data_to_read) {          // Enquanto houver dados para ler e enviar ao cliente
+
         char tmp[OFFSET];                       // Armazena o valor de seq_no atual como uma string
         sprintf(tmp, "%d", segment_id);         // Converte o valor de int para string e coloca em tmp - Ex: "0"
         strcat(segment->pkt_data, tmp);    // Concatena o conteúdo de tmp com o de pkt_data (que inicialmente está vazio)
@@ -116,19 +112,14 @@ while(j<tam_janela){
 
         wait_for_ack = 1;                           // pkt enviado, agora irá aguardar o reconhecimento para esse pkt
 
-        printf("\tpkt sent: seq_no = %d\n", k);    // Informa que o pkt foi enviado e seu seq_no
+        printf("\tpkt sent: seq_no = %d\n", segment_id);    // Informa que o pkt foi enviado e seu seq_no
 
         if (data_to_read == 0) {    // Se não há mais dados para ler - o último pkt enviado terá buffer nulo - então...
             wait_for_ack = 0;       // ...não precisa esperar por uma resposta ack - Indica que a transferência de dados terminou
         }
-j++;
-k++;
 
-}
-sleep(2);
-int m=0;
         //while(wait_for_ack) {       // Enquanto o reconhecimento do pkt enviado não chegar
-while(m<tam_janela){
+
             // Aguarda o recebimento do ack de reconhecimento do pkt enviado
             status = tp_recvfrom(server_socket, segment->ack, (30*sizeof(char)), &client_addr);
 
@@ -140,29 +131,24 @@ while(m<tam_janela){
                  //   printf("\tACK_no = %d not received\n", segment_id + 1);
                    // wait_for_ack = 1;                               // Senão, continua esperando por um ack válido
                 //}
-                  
-                    segment_id++;   
             } else {                                                // Caso tp_recvfrom() retorne com valor -1
                 if (errno == EWOULDBLOCK) {                         // Testa se foi devido ao fim da temporização da função recvfrom()
                     printf("\ttimeout event\n"); 
                     fseek (File_read,segment_id*tam_buffer , 0);                   // Se sim, indica uma perda de pkt, e ele é então reenviado
                    // tp_sendto(server_socket, segment->pkt_data, segment->pkt_data_size, &client_addr);
                     printf("\tpkt resent: seq_no = %d\n", segment_id);
-                    wait_for_ack = 1;    
-                    break;                           // E volta-se a aguardar pelo seu ack
+                    wait_for_ack = 1;                               // E volta-se a aguardar pelo seu ack
                 } else {                                            // Caso o erro seja outro, termina o programa e retorna o código do erro
                     printf("\terror %d: %s\n", errno, strerror(errno));
                     exit(1);
                 }
             }
-              m++;
-        //}  m++;
+        //}
+        
         memset(buffer, 0x0, strlen(buffer));                                    // 
-        memset(segment->pkt_data, 0x0, strlen(segment->pkt_data));  
-      }  
-        // 
+        memset(segment->pkt_data, 0x0, strlen(segment->pkt_data));    // 
 
-            // Incrementa o seq_no do próximo pkt a ser enviado
+        segment_id++;       // Incrementa o seq_no do próximo pkt a ser enviado
     }
     
     fclose(File_read);              // Fecha arquivo de leitura

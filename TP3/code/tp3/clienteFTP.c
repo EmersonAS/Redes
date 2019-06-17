@@ -30,8 +30,6 @@ int main(int argc, char const *argv[]) {
     
     int tam_buffer = atoi(argv[4]);             // Tamanho máximo do buffer para envio do pacotes de dados (pkt_data)
 
-    int tam_janela=3;  
-
     char file_Name[FILE_NAME_SIZE]= {0};        // Buffer para envio do nome do arquivo
 
     struct timeval start, end;                  // Estruturas com variáveis tv_sec e tv_usec que guardam a contagem do tempo
@@ -73,7 +71,7 @@ int main(int argc, char const *argv[]) {
     int segment_id = 0;             // Numero de sequencia do primeiro pacote a ser recebido
     int data_to_recv = 1;           // Variável para controlar o loop de recebimento dos dados e gravação dos dados
 
-    while (data_to_recv==1) {          // Enquanto houver dados para receber
+    while (data_to_recv) {          // Enquanto houver dados para receber
         
         status = tp_recvfrom(client_socket, segment->pkt_data, segment->pkt_data_size, &server_addr);
 
