@@ -8,7 +8,7 @@
 
 #include "tp_socket.h"
 
-#define FILE_NAME_SIZE 1024	    // Tamanho máximo do buffer p/ troca de info da conexão e nome do arquivo
+#define FILE_NAME_SIZE 1024     // Tamanho máximo do buffer p/ troca de info da conexão e nome do arquivo
 #define OFFSET 10               // Tamanho máximo do campo seq_no quando encapsulado com o pacote de dados
 
 typedef struct segment {
@@ -21,14 +21,15 @@ typedef struct segment {
 
 int main(int argc, char const *argv[]) {
 
-	int status = 0;                             // Para verificar o retorno das funções
+    int status = 0;                             // Para verificar o retorno das funções
 
-	int server_socket;                     	    // Descritor de socket para o servidor
+    int server_socket;                          // Descritor de socket para o servidor
     so_addr client_addr;                        // Estrutura do tipo endereço de socket
 
     int port = atoi(argv[1]);                   // Número da porta
     int tam_buffer = atoi(argv[2]);             // Tamanho máximo do buffer para envio do pacotes de dados (pkt_data)
 
+    int tam_janela=atoi(argv[3]);
     char file_Name[FILE_NAME_SIZE] = {0};       // Buffer para receber o nome do arquivo
 
     struct timeval start, end;                  // Estruturas com variáveis tv_sec e tv_usec que guardam a contagem do tempo
@@ -49,17 +50,17 @@ int main(int argc, char const *argv[]) {
     int bytes_sent_total = 0;   // Inicializa contador do total de bytes lidos do arquivo (a serem enviados)
     int bytes_sent = 0;         // Inicializa a contagem de bytes lidos do arquivo
 
-	if ((tp_recvfrom(server_socket, file_Name, FILE_NAME_SIZE, &client_addr)) < 0) { // Recebe o nome do arquivo do cliente
+    if ((tp_recvfrom(server_socket, file_Name, FILE_NAME_SIZE, &client_addr)) < 0) { // Recebe o nome do arquivo do cliente
         printf("\tfile name not received.\n");
         exit(1);
     }
     printf("\tfile name received: %s\n", file_Name);
     
     File_read = fopen(file_Name, "r");          // Abre o arquivo como somente leitura
-  	if(File_read == NULL){
-  	    printf("\tcould not open file.\n");
-  	    exit(1);
-  	}
+    if(File_read == NULL){
+        printf("\tcould not open file.\n");
+        exit(1);
+    }
     
     // Inicializa a estrutura do tipo Segment alocando memória para pkt_data de acordo com tam_buffer e OFFSET
 
@@ -72,7 +73,7 @@ int main(int argc, char const *argv[]) {
     // Protocolo Stop-and-Wait com retranmissão de pkt (por temporização)
 
     struct timeval temporizador;    // Declara temporizador
-    temporizador.tv_sec = 1;        // timeout_s = 1 segundo
+    temporizador.tv_sec = 5;        // timeout_s = 1 segundo
     temporizador.tv_usec = 0;       // timeout_us = 0 microsegundos
 
     // SO_RCVTIMEO : aceita uma struct "timeval" que indica o número em segundos e microsegundos a serem esperados até
@@ -86,9 +87,14 @@ int main(int argc, char const *argv[]) {
     int segment_id = 0;             // Numero de sequencia do primeiro pacote a ser recebido
     int data_to_read = 1;           // Variável para controlar o loop de leitura e envio dos dados
     int wait_for_ack = 1;           // Variável para controlar o loop de espera por um ack
-
+    int k=0;
+    
     while (data_to_read) {          // Enquanto houver dados para ler e enviar ao cliente
+    int j=0;
+    k=segment_id;
 
+//Envio da janela
+while(j<tam_janela){
         char tmp[OFFSET];                       // Armazena o valor de seq_no atual como uma string
         sprintf(tmp, "%d", segment_id);         // Converte o valor de int para string e coloca em tmp - Ex: "0"
         strcat(segment->pkt_data, tmp);    // Concatena o conteúdo de tmp com o de pkt_data (que inicialmente está vazio)
@@ -112,42 +118,38 @@ int main(int argc, char const *argv[]) {
 
         wait_for_ack = 1;                           // pkt enviado, agora irá aguardar o reconhecimento para esse pkt
 
-        printf("\tpkt sent: seq_no = %d\n", segment_id);    // Informa que o pkt foi enviado e seu seq_no
-
-        if (data_to_read == 0) {    // Se não há mais dados para ler - o último pkt enviado terá buffer nulo - então...
-            wait_for_ack = 0;       // ...não precisa esperar por uma resposta ack - Indica que a transferência de dados terminou
-        }
-
-        while(wait_for_ack) {       // Enquanto o reconhecimento do pkt enviado não chegar
-
+        printf("\tpkt sent: seq_no = %d\n", k);    // Informa que o pkt foi enviado e seu seq_no   
+        j++;
+        k++;
+}
+//sleep(2);
+int m=0;
+      //Recebimento da janela
+while(m<tam_janela){
             // Aguarda o recebimento do ack de reconhecimento do pkt enviado
             status = tp_recvfrom(server_socket, segment->ack, (30*sizeof(char)), &client_addr);
 
             if (status > 0) {                                       // Se dados foram recebidos
-                if (atoi(segment->ack) == segment_id + 1) {    // Testa se é o ack esperado do último pkt enviado
                     printf("\tACK_no = %d received\n", atoi(segment->ack));
-                    wait_for_ack = 0;                               // Se for, libera o envio do próximo pkt - data_to_read continua 1
-                } else {
-                    printf("\tACK_no = %d not received\n", segment_id + 1);
-                    wait_for_ack = 1;                               // Senão, continua esperando por um ack válido
-                }
+                 
+                  
+                    segment_id++;   
             } else {                                                // Caso tp_recvfrom() retorne com valor -1
                 if (errno == EWOULDBLOCK) {                         // Testa se foi devido ao fim da temporização da função recvfrom()
-                    printf("\ttimeout event\n");                    // Se sim, indica uma perda de pkt, e ele é então reenviado
-                    tp_sendto(server_socket, segment->pkt_data, segment->pkt_data_size, &client_addr);
+                    printf("\ttimeout event\n"); 
+                    fseek (File_read,segment_id*tam_buffer , 0);                   // Se sim, ele retorna para o ack que deu errado.
                     printf("\tpkt resent: seq_no = %d\n", segment_id);
-                    wait_for_ack = 1;                               // E volta-se a aguardar pelo seu ack
+                    break;                           // E volta-se a aguardar pelo seu ack
                 } else {                                            // Caso o erro seja outro, termina o programa e retorna o código do erro
                     printf("\terror %d: %s\n", errno, strerror(errno));
                     exit(1);
                 }
             }
-        }
-        
+              m++;
         memset(buffer, 0x0, strlen(buffer));                                    // 
-        memset(segment->pkt_data, 0x0, strlen(segment->pkt_data));    // 
-
-        segment_id++;       // Incrementa o seq_no do próximo pkt a ser enviado
+        memset(segment->pkt_data, 0x0, strlen(segment->pkt_data));  
+      }  
+  
     }
     
     fclose(File_read);              // Fecha arquivo de leitura
@@ -162,5 +164,5 @@ int main(int argc, char const *argv[]) {
         ((end.tv_sec + end.tv_usec * 1e-6) - (start.tv_sec + start.tv_usec * 1e-6)), 
         (float) bytes_sent_total/((end.tv_sec + end.tv_usec * 1e-6) - (start.tv_sec + start.tv_usec * 1e-6)));
 
-	return 0;
+    return 0;
 }
