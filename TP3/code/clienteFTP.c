@@ -30,7 +30,7 @@ int main(int argc, char const *argv[]) {
     
     int tam_buffer = atoi(argv[4]);             // Tamanho máximo do buffer para envio do pacotes de dados (pkt_data)
 
-    int tam_janela=3;  
+int tam_janela=atoi(argv[5]);
 
     char file_Name[FILE_NAME_SIZE]= {0};        // Buffer para envio do nome do arquivo
 

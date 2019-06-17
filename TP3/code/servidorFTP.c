@@ -29,6 +29,7 @@ int main(int argc, char const *argv[]) {
     int port = atoi(argv[1]);                   // Número da porta
     int tam_buffer = atoi(argv[2]);             // Tamanho máximo do buffer para envio do pacotes de dados (pkt_data)
 
+    int tam_janela=atoi(argv[3]);
     char file_Name[FILE_NAME_SIZE] = {0};       // Buffer para receber o nome do arquivo
 
     struct timeval start, end;                  // Estruturas com variáveis tv_sec e tv_usec que guardam a contagem do tempo
@@ -86,12 +87,13 @@ int main(int argc, char const *argv[]) {
     int segment_id = 0;             // Numero de sequencia do primeiro pacote a ser recebido
     int data_to_read = 1;           // Variável para controlar o loop de leitura e envio dos dados
     int wait_for_ack = 1;           // Variável para controlar o loop de espera por um ack
-int k=0;
-int tam_janela=3;
+    int k=0;
+    
     while (data_to_read) {          // Enquanto houver dados para ler e enviar ao cliente
-int j=0;
-k=segment_id;
+    int j=0;
+    k=segment_id;
 
+//Envio da janela
 while(j<tam_janela){
         char tmp[OFFSET];                       // Armazena o valor de seq_no atual como uma string
         sprintf(tmp, "%d", segment_id);         // Converte o valor de int para string e coloca em tmp - Ex: "0"
@@ -116,39 +118,27 @@ while(j<tam_janela){
 
         wait_for_ack = 1;                           // pkt enviado, agora irá aguardar o reconhecimento para esse pkt
 
-        printf("\tpkt sent: seq_no = %d\n", k);    // Informa que o pkt foi enviado e seu seq_no
-
-        if (data_to_read == 0) {    // Se não há mais dados para ler - o último pkt enviado terá buffer nulo - então...
-            wait_for_ack = 0;       // ...não precisa esperar por uma resposta ack - Indica que a transferência de dados terminou
-        }
-j++;
-k++;
-
+        printf("\tpkt sent: seq_no = %d\n", k);    // Informa que o pkt foi enviado e seu seq_no   
+        j++;
+        k++;
 }
-sleep(2);
+//sleep(2);
 int m=0;
-        //while(wait_for_ack) {       // Enquanto o reconhecimento do pkt enviado não chegar
+      //Recebimento da janela
 while(m<tam_janela){
             // Aguarda o recebimento do ack de reconhecimento do pkt enviado
             status = tp_recvfrom(server_socket, segment->ack, (30*sizeof(char)), &client_addr);
 
             if (status > 0) {                                       // Se dados foram recebidos
-             //   if (atoi(segment->ack) == segment_id + 1) {    // Testa se é o ack esperado do último pkt enviado
                     printf("\tACK_no = %d received\n", atoi(segment->ack));
-                    wait_for_ack = 0;                               // Se for, libera o envio do próximo pkt - data_to_read continua 1
-               // } else {
-                 //   printf("\tACK_no = %d not received\n", segment_id + 1);
-                   // wait_for_ack = 1;                               // Senão, continua esperando por um ack válido
-                //}
+                 
                   
                     segment_id++;   
             } else {                                                // Caso tp_recvfrom() retorne com valor -1
                 if (errno == EWOULDBLOCK) {                         // Testa se foi devido ao fim da temporização da função recvfrom()
                     printf("\ttimeout event\n"); 
-                    fseek (File_read,segment_id*tam_buffer , 0);                   // Se sim, indica uma perda de pkt, e ele é então reenviado
-                   // tp_sendto(server_socket, segment->pkt_data, segment->pkt_data_size, &client_addr);
+                    fseek (File_read,segment_id*tam_buffer , 0);                   // Se sim, ele retorna para o ack que deu errado.
                     printf("\tpkt resent: seq_no = %d\n", segment_id);
-                    wait_for_ack = 1;    
                     break;                           // E volta-se a aguardar pelo seu ack
                 } else {                                            // Caso o erro seja outro, termina o programa e retorna o código do erro
                     printf("\terror %d: %s\n", errno, strerror(errno));
@@ -156,13 +146,10 @@ while(m<tam_janela){
                 }
             }
               m++;
-        //}  m++;
         memset(buffer, 0x0, strlen(buffer));                                    // 
         memset(segment->pkt_data, 0x0, strlen(segment->pkt_data));  
       }  
-        // 
-
-            // Incrementa o seq_no do próximo pkt a ser enviado
+  
     }
     
     fclose(File_read);              // Fecha arquivo de leitura
