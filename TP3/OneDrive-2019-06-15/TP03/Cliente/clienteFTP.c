@@ -1,12 +1,3 @@
-/**************************************************************************************
-***************************************************************************************
-**                          UNIVERSIDADE FEDERAL DE MINAS GERAIS
-**                       Trabalho Prático 3 de Redes de Computadores
-**                           ALUNO: JANDERSON BARBEITO DA SILVA
-**
-***************************************************************************************
-**************************************************************************************/
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -30,13 +21,13 @@ int main(){
 
 	// Declaração das variáveis do programa
 	int clienteSocket;
-	int TAM_BUFFER =100;     // armazena o tamnaho do buffer passado na chamada do programa
+	int TAM_BUFFER =1000;     // armazena o tamanho do buffer passado na chamada do programa
 	char buffer[TAM_BUFFER+100];            // buffer utilizado para a troca de mensagens
 	char buffer_aux[500];
 	char *ipServer = "127.0.0.1";           // endereço ip do servidor
 	int porta = 4242;
 	char cabecalho[100];
-	char *nomeArquivo = "4000.txt";        // nome do arquivo a ser lido no servidor
+	char *nomeArquivo = "3mb.txt";        // nome do arquivo a ser lido no servidor
 	unsigned totalBytes = 0;            // total de bytes recebidos do servidor
 	int nBytes;                         // armazena a quantidade de bytes
 	FILE *arq;                          // posição de memória em que começa o arquivo que irá conter os dados recebidos do servidor

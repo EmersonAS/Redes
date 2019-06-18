@@ -1,10 +1,3 @@
-/**************************************************************************************
-***************************************************************************************
-**                          UNIVERSIDADE FEDERAL DE MINAS GERAIS
-**                       Trabalho Prático 3 de Redes de Computades
-***************************************************************************************
-**************************************************************************************/
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -25,7 +18,7 @@ void logExit(const char *str){
     exit(EXIT_FAILURE);
 }
 
-int main(int argc, char *argv[]){
+int main(){
 
     // Confere a quantidade de arqumentos recebidos na chamada do programa
 	// Encerra o programa se a quantidade é inválida
@@ -34,7 +27,7 @@ int main(int argc, char *argv[]){
     // Declaração das variáveis
     int iniciar = tp_init();
     so_addr* clientAddr = malloc(sizeof(so_addr));
-    int TAM_BUFFER = 100;
+    int TAM_BUFFER = 1000;
     char buffer[TAM_BUFFER+100];
     char parteArquivo[TAM_BUFFER];
     char cabecalho[100];
